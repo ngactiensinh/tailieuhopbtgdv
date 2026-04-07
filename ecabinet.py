@@ -13,24 +13,9 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS TÙY CHỈNH ---
+# --- CSS TÙY CHỈNH (GIAO DIỆN TRUYỀN THỐNG CỦA BAN) ---
 st.markdown("""
 <style>
-    .header-banner {
-        background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-        padding: 20px;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
-    }
-    .header-banner h1 { font-size: 32px; font-weight: bold; margin: 0; text-transform: uppercase;}
-    .header-banner p { font-size: 16px; margin: 5px 0 0 0; color: #e0e0e0;}
-    .section-title { color: #2c5364; border-bottom: 2px solid #2c5364; padding-bottom: 5px; margin-top: 20px;}
-    .doc-card { background-color: #f8f9fa; border-left: 5px solid #2c5364; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
-    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
-    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
     .header-oval {
         background-color: #ffffff;
         border: 4px solid #C8102E;
@@ -46,6 +31,10 @@ st.markdown("""
     }
     .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
+    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
+    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
+    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
+    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
 </style>
 """, unsafe_allow_html=True)
 
