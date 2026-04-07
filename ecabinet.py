@@ -13,28 +13,60 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS TÙY CHỈNH (GIAO DIỆN TRUYỀN THỐNG CỦA BAN) ---
+# --- CSS TÙY CHỈNH (GIAO DIỆN PHẲNG - MÀU EDOC+) ---
 st.markdown("""
 <style>
-    .header-oval {
+    /* Nền trang web màu xám nhạt dịu mắt */
+    .stApp {
+        background-color: #f4f6f9;
+    }
+    
+    /* Khung tiêu đề vuông vắn, viền trên màu xanh teal */
+    .header-box {
         background-color: #ffffff;
-        border: 4px solid #C8102E;
-        border-radius: 60px;
+        border-top: 4px solid #17a2b8;
+        border-radius: 5px;
         padding: 15px 30px;
         margin-bottom: 30px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        box-shadow: 0px 2px 10px rgba(0,0,0,0.05);
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 25px;
+        gap: 20px;
         flex-wrap: wrap;
     }
-    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
-    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
-    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
-    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
-    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
-    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
+    .main-title { font-size: 26px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
+    .sub-title { font-size: 16px; font-weight: bold; color: #6c757d; margin-top: 5px; text-align: center;}
+    
+    /* Tiêu đề các Section */
+    .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 18px; text-transform: uppercase; font-weight: bold;}
+    
+    /* Thẻ tài liệu */
+    .doc-card { background-color: #ffffff; border-left: 4px solid #28a745; padding: 15px; border-radius: 4px; margin-bottom: 12px; box-shadow: 0px 2px 5px rgba(0,0,0,0.05);}
+    .doc-title { font-size: 15px; font-weight: bold; color: #343a40;}
+    .doc-type { font-size: 12px; background-color: #e9ecef; padding: 3px 8px; border-radius: 4px; color: #495057;}
+    
+    /* Khung viền cho các Form nhập liệu */
+    div[data-testid="stForm"] {
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 20px;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.05);
+    }
+    
+    /* Tùy chỉnh Nút bấm */
+    div.stButton > button:first-child {
+        background-color: #17a2b8;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        font-weight: bold;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #138496;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -67,12 +99,12 @@ def get_logo_base64():
 def hien_thi_tieu_de(tieu_de_chinh):
     logo_data = get_logo_base64()
     if logo_data:
-        logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 85px;">'
+        logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 75px;">'
     else:
-        logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png" style="height: 85px;">'
+        logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png" style="height: 75px;">'
     
     st.markdown(f"""
-    <div class="header-oval">
+    <div class="header-box">
         <div>{logo_html}</div>
         <div>
             <div class="main-title">{tieu_de_chinh}</div>
@@ -122,13 +154,13 @@ logo_sidebar = get_logo_base64()
 if logo_sidebar:
     st.sidebar.markdown(f"""
         <div style="text-align: center;">
-            <img src="data:image/png;base64,{logo_sidebar}" width="120">
+            <img src="data:image/png;base64,{logo_sidebar}" width="110">
         </div>
     """, unsafe_allow_html=True)
 else:
     st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png", width=80)
 
-st.sidebar.markdown(f"<div style='text-align: center; margin-top: 10px;'><b>👤 Quyền:</b> {'Quản trị viên (Admin)' if st.session_state['role'] == 'Admin' else 'Đại biểu'}</div>", unsafe_allow_html=True)
+st.sidebar.markdown(f"<div style='text-align: center; margin-top: 15px; color: #2c3e50;'><b>👤 Quyền:</b> {'Quản trị viên (Admin)' if st.session_state['role'] == 'Admin' else 'Đại biểu'}</div>", unsafe_allow_html=True)
 
 if st.sidebar.button("🚪 Đăng xuất", use_container_width=True):
     st.session_state["role"] = None
@@ -163,7 +195,7 @@ if menu == "📚 Phòng họp & Tài liệu":
             ma_ch_dang_chon = chon_hop.split(" - ")[0]
             thong_tin_hop = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch_dang_chon].iloc[0]
             
-            st.markdown(f"### 📋 {thong_tin_hop['Tên cuộc họp']}")
+            st.markdown(f"<h3 style='color: #2c3e50;'>📋 {thong_tin_hop['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
             c1, c2, c3 = st.columns(3)
             c1.write(f"**⏰ Thời gian:** {thong_tin_hop['Thời gian']}")
             c2.write(f"**📍 Địa điểm:** {thong_tin_hop['Địa điểm']}")
@@ -174,7 +206,7 @@ if menu == "📚 Phòng họp & Tài liệu":
             col_doc, col_feedback = st.columns([5, 5])
             
             with col_doc:
-                st.markdown('<h3 class="section-title">📑 TÀI LIỆU KỲ HỌP</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">📑 TÀI LIỆU KỲ HỌP</div>', unsafe_allow_html=True)
                 if not df_tai_lieu.empty:
                     tl_cua_hop = df_tai_lieu[df_tai_lieu['Mã cuộc họp'] == ma_ch_dang_chon]
                     if tl_cua_hop.empty:
@@ -184,9 +216,9 @@ if menu == "📚 Phòng họp & Tài liệu":
                             st.markdown(f"""
                             <div class="doc-card">
                                 <div class="doc-title">📄 {row.get('Tên tài liệu', 'Không tên')}</div>
-                                <div style="margin-top: 5px;">
+                                <div style="margin-top: 8px;">
                                     <span class="doc-type">{row.get('Loại tài liệu', 'Tài liệu')}</span>
-                                    <a href="{row.get('Link Google Drive', '#')}" target="_blank" style="margin-left: 15px; text-decoration: none; color: #C8102E; font-weight: bold;">📥 Xem / Tải về</a>
+                                    <a href="{row.get('Link Google Drive', '#')}" target="_blank" style="margin-left: 15px; text-decoration: none; color: #17a2b8; font-weight: bold;">📥 Xem / Tải về</a>
                                 </div>
                             </div>
                             """, unsafe_allow_html=True)
@@ -194,7 +226,7 @@ if menu == "📚 Phòng họp & Tài liệu":
                     st.write("Chưa có tài liệu nào được đăng tải.")
 
             with col_feedback:
-                st.markdown('<h3 class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</h3>', unsafe_allow_html=True)
+                st.markdown('<div class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</div>', unsafe_allow_html=True)
                 
                 tab_gui, tab_xem = st.tabs(["💬 Gửi Ý kiến", "📂 Ý kiến đã thu nhận"])
                 
@@ -260,7 +292,7 @@ if menu == "📚 Phòng họp & Tài liệu":
 # MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP
 # ---------------------------------------------------------
 elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
-    st.markdown('<h3 class="section-title">➕ TẠO CUỘC HỌP MỚI</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
     with st.form("form_tao_hop", clear_on_submit=True):
         col1, col2 = st.columns([1, 3])
         with col1: ma_ch = st.text_input("Mã Cuộc họp (VD: CH01)*:")
@@ -289,7 +321,7 @@ elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
 # MODULE 3: QUẢN TRỊ ĐĂNG TÀI LIỆU
 # ---------------------------------------------------------
 elif menu == "📤 Quản trị: Đăng Tài liệu":
-    st.markdown('<h3 class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</h3>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</div>', unsafe_allow_html=True)
     if df_cuoc_hop.empty:
         st.warning("⚠️ Bạn cần tạo Cuộc họp trước khi đăng tài liệu.")
     else:
