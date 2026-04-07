@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import base64
 import pandas as pd
+import os
 from datetime import datetime
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
@@ -12,31 +13,6 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 # --- MẬT KHẨU QUẢN TRỊ ---
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
-
-# --- CSS TÙY CHỈNH (GIAO DIỆN TRUYỀN THỐNG CỦA BAN) ---
-st.markdown("""
-<style>
-    .header-oval {
-        background-color: #ffffff;
-        border: 4px solid #C8102E;
-        border-radius: 60px;
-        padding: 15px 30px;
-        margin-bottom: 30px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 25px;
-        flex-wrap: wrap;
-    }
-    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
-    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
-    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
-    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
-    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
-    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
-</style>
-""", unsafe_allow_html=True)
 
 # --- DANH SÁCH CHỨC VỤ & ĐƠN VỊ NỘI BỘ ---
 DS_CHUC_VU = [
@@ -55,17 +31,16 @@ DS_DON_VI = [
     "Phòng Đoàn thể và các Hội"
 ]
 
-# --- HÀM LẤY LOGO TỪ GITHUB ---
-def get_logo_base64():
-    try:
-        with open("Logo TGDV.png", "rb") as f:
+# --- HÀM ĐỌC ẢNH TỪ GITHUB (TRÁNH LỖI KHI KHÔNG CÓ FILE) ---
+def get_image_base64(filename):
+    if os.path.exists(filename):
+        with open(filename, "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
-    except:
-        return ""
+    return ""
 
-# --- HÀM TẠO TIÊU ĐỀ Banner ---
+# --- HÀM TẠO TIÊU ĐỀ Banner (Cho giao diện bên trong) ---
 def hien_thi_tieu_de(tieu_de_chinh):
-    logo_data = get_logo_base64()
+    logo_data = get_image_base64("Logo TGDV.png")
     if logo_data:
         logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 85px;">'
     else:
@@ -91,19 +66,120 @@ def load_data():
         return {"cuoc_hop": [], "tai_lieu": [], "y_kien": []}
 
 # ==========================================
-# KHUNG ĐĂNG NHẬP
+# KHUNG ĐĂNG NHẬP (GIAO DIỆN iCPV CABINET)
 # ==========================================
 if "role" not in st.session_state:
     st.session_state["role"] = None
 
 if st.session_state["role"] is None:
-    hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
+    # --- CSS SIÊU CẤP CHO MÀN HÌNH ĐĂNG NHẬP ---
+    st.markdown("""
+    <style>
+        /* Nền toàn bộ màn hình màu đỏ cờ */
+        .stApp {
+            background: linear-gradient(135deg, #B30000, #800000, #4d0000) !important;
+        }
+        /* Ẩn Header mặc định */
+        header {visibility: hidden;}
+        
+        /* Căn chỉnh lại padding của Streamlit */
+        .block-container {
+            padding-top: 5vh !important;
+            padding-bottom: 2rem !important;
+            max-width: 1000px !important;
+        }
+        
+        /* Box trắng bao bọc form đăng nhập */
+        .login-box {
+            background-color: white;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0px 10px 30px rgba(0,0,0,0.6);
+            height: 100%;
+        }
+        .main-text {
+            color: #004B87;
+            font-size: 20px;
+            font-weight: 900;
+            text-align: center;
+            line-height: 1.3;
+            margin-top: 10px;
+            margin-bottom: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .sub-text {
+            color: #004B87;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .label-text {
+            font-size: 14px;
+            color: #C8102E;
+            font-weight: bold;
+            margin-bottom: -10px;
+        }
+        /* Chỉnh nút bấm màu đỏ */
+        div.stButton > button:first-child {
+            background-color: #C8102E !important;
+            color: white !important;
+            border-radius: 8px !important;
+            border: none !important;
+            font-weight: bold !important;
+            padding: 10px !important;
+            margin-top: 15px !important;
+        }
+        div.stButton > button:first-child:hover {
+            background-color: #8b0000 !important;
+        }
+        .link-text {
+            font-size: 13px;
+            color: #C8102E;
+            text-align: right;
+            cursor: pointer;
+            margin-top: -15px;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # Khung layout chính (Gộp cả ảnh và form vào chung một hàng)
+    st.markdown('<div style="background-color: white; border-radius: 15px; overflow: hidden; box-shadow: 0px 15px 40px rgba(0,0,0,0.5);">', unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.info("👋 Xin chào! Vui lòng nhập mật khẩu để vào Phòng họp trực tuyến.")
-        pwd = st.text_input("🔑 Nhập mật khẩu truy cập:", type="password")
-        if st.button("🚀 Đăng nhập", use_container_width=True):
+    col_img, col_form = st.columns([1.2, 1], gap="small")
+    
+    # Cột trái: Ảnh phòng họp
+    with col_img:
+        img_phonghop = get_image_base64("phonghop.jpg")
+        if img_phonghop:
+            st.markdown(f'<img src="data:image/jpeg;base64,{img_phonghop}" style="width: 100%; height: 500px; object-fit: cover; display: block; border-right: 2px solid #f0f0f0;">', unsafe_allow_html=True)
+        else:
+            # Ảnh mặc định nếu chưa up phonghop.jpg
+            st.markdown(f'<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Vietnam_National_Assembly_Hall.jpg/800px-Vietnam_National_Assembly_Hall.jpg" style="width: 100%; height: 500px; object-fit: cover; display: block; border-right: 2px solid #f0f0f0;">', unsafe_allow_html=True)
+    
+    # Cột phải: Form đăng nhập
+    with col_form:
+        st.markdown('<div style="padding: 30px 40px 30px 20px;">', unsafe_allow_html=True)
+        
+        # Logo
+        logo_data = get_image_base64("Logo TGDV.png")
+        if logo_data:
+            st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_data}" style="height:50px;"></div>', unsafe_allow_html=True)
+        
+        # Text
+        st.markdown('<div class="main-text">HỆ THỐNG THÔNG TIN PHỤC VỤ HỌP<br>VÀ XỬ LÝ CÔNG VIỆC</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-text">Đăng nhập</div>', unsafe_allow_html=True)
+        
+        # Form nhập liệu
+        st.markdown('<p class="label-text">Tên tài khoản *</p>', unsafe_allow_html=True)
+        tk = st.text_input("Tên tài khoản", value="Đại biểu dự họp", label_visibility="collapsed", disabled=True)
+        
+        st.markdown('<p class="label-text">Mật khẩu *</p>', unsafe_allow_html=True)
+        pwd = st.text_input("Mật khẩu", type="password", label_visibility="collapsed")
+        
+        st.markdown('<div class="link-text">Quên mật khẩu?</div>', unsafe_allow_html=True)
+        
+        if st.button("Đăng nhập", use_container_width=True):
             if pwd == PASS_ADMIN:
                 st.session_state["role"] = "Admin"
                 st.rerun()
@@ -112,13 +188,43 @@ if st.session_state["role"] is None:
                 st.rerun()
             else:
                 st.error("❌ Mật khẩu không chính xác!")
+                
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
 # ==========================================
 # GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
 # ==========================================
+# --- TRẢ LẠI CSS NỀN TRẮNG VÀ GIAO DIỆN TRUYỀN THỐNG ---
+st.markdown("""
+<style>
+    .stApp { background: #FFFFFF !important; }
+    .header-oval {
+        background-color: #ffffff;
+        border: 4px solid #C8102E;
+        border-radius: 60px;
+        padding: 15px 30px;
+        margin-bottom: 30px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 25px;
+        flex-wrap: wrap;
+    }
+    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
+    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
+    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
+    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
+    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
+    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
+</style>
+""", unsafe_allow_html=True)
+
 # Hiển thị Logo lên Sidebar
-logo_sidebar = get_logo_base64()
+logo_sidebar = get_image_base64("Logo TGDV.png")
 if logo_sidebar:
     st.sidebar.markdown(f"""
         <div style="text-align: center;">
