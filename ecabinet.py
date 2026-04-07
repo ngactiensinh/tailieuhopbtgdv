@@ -6,14 +6,14 @@ from datetime import datetime
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
-# ---> LINK ỐNG NƯỚC (ĐÃ NHÚNG TỰ ĐỘNG) <---
+# ---> LINK ỐNG NƯỚC <---
 WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkBcWQWqjJJbHM56Dd8oJfqfovogDVk_KqgnNDMbmmQo0/exec"
 
 # --- MẬT KHẨU QUẢN TRỊ ---
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS TÙY CHỈNH (GIAO DIỆN PHÒNG HỌP KHÔNG GIẤY) ---
+# --- CSS TÙY CHỈNH ---
 st.markdown("""
 <style>
     .header-banner {
@@ -34,17 +34,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DANH SÁCH ĐƠN VỊ (MÔ HÌNH 2 CẤP) ---
-DANH_SACH_DON_VI = [
-    "Chọn đơn vị...", "Lãnh đạo Ban TG&DV Tỉnh ủy", "Chuyên viên Ban TG&DV Tỉnh ủy",
-    "Đảng ủy Công an tỉnh", "Đảng ủy Quân sự tỉnh", "Đảng ủy các cơ quan Đảng tỉnh", "Đảng ủy Ủy ban nhân dân tỉnh",
-    "Trung tâm chính trị xã Đồng Văn", "Trung tâm chính trị xã Mèo Vạc", "Trung tâm chính trị xã Yên Minh", 
-    "Trung tâm chính trị xã Quản Bạ", "Trung tâm chính trị xã Hoàng Su Phì", "Trung tâm chính trị xã Pà Vầy Sủ", 
-    "Trung tâm chính trị xã Bắc Mê", "Trung tâm chính trị xã Vị Xuyên", "Trung tâm chính trị xã Bắc Quang", 
-    "Trung tâm chính trị xã Quang Bình", "Trung tâm chính trị phường Hà Giang 2", "Trung tâm chính trị xã Lâm Bình", 
-    "Trung tâm chính trị xã Nà Hang", "Trung tâm chính trị xã Chiêm Hóa", "Trung tâm chính trị xã Hàm Yên", 
-    "Trung tâm chính trị xã Yên Sơn", "Trung tâm chính trị xã An Tường", "Trung tâm chính trị xã Sơn Dương",
-    "Đảng ủy các xã/phường khác..."
+# --- DANH SÁCH CHỨC VỤ & ĐƠN VỊ NỘI BỘ ---
+DS_CHUC_VU = [
+    "Chọn chức vụ...", "Trưởng Ban", "Phó Trưởng ban Thường trực", "Phó Trưởng Ban", 
+    "Trưởng phòng", "Phó Trưởng phòng", "Chánh Văn phòng", "Phó Chánh Văn phòng", "Chuyên viên", "Khác"
+]
+
+DS_DON_VI = [
+    "Chọn đơn vị...", 
+    "Ban Tuyên giáo và Dân vận Tỉnh ủy (Dành cho Lãnh đạo Ban)", 
+    "Văn phòng Ban", 
+    "Phòng Lý luận chính trị, Lịch sử Đảng", 
+    "Phòng Tuyên truyền, Báo chí - Xuất bản", 
+    "Phòng Khoa giáo, Văn hóa - Văn nghệ", 
+    "Phòng Dân vận các cơ quan Nhà nước, dân tộc và tôn giáo", 
+    "Phòng Đoàn thể và các Hội"
 ]
 
 # --- HÀM LẤY DỮ LIỆU ---
@@ -106,13 +110,12 @@ df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
 df_y_kien = pd.DataFrame(data.get("y_kien", []))
 
 # ---------------------------------------------------------
-# MODULE 1: PHÒNG HỌP & TÀI LIỆU (Dành cho tất cả)
+# MODULE 1: PHÒNG HỌP & TÀI LIỆU
 # ---------------------------------------------------------
 if menu == "📚 Phòng họp & Tài liệu":
     if df_cuoc_hop.empty:
-        st.info("chưa có cuộc họp nào được tạo trên hệ thống.")
+        st.info("Hiện chưa có cuộc họp nào được tạo trên hệ thống.")
     else:
-        # Lọc danh sách cuộc họp để chọn
         ds_cuoc_hop_hien_thi = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
         chon_hop = st.selectbox("📌 Lựa chọn Cuộc họp / Hội nghị:", ds_cuoc_hop_hien_thi.tolist())
         
@@ -120,7 +123,6 @@ if menu == "📚 Phòng họp & Tài liệu":
             ma_ch_dang_chon = chon_hop.split(" - ")[0]
             thong_tin_hop = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch_dang_chon].iloc[0]
             
-            # Khung thông tin cuộc họp
             st.markdown(f"### 📋 {thong_tin_hop['Tên cuộc họp']}")
             c1, c2, c3 = st.columns(3)
             c1.write(f"**⏰ Thời gian:** {thong_tin_hop['Thời gian']}")
@@ -129,8 +131,7 @@ if menu == "📚 Phòng họp & Tài liệu":
             
             st.write("---")
             
-            # Chia 2 cột: Cột trái là Tài liệu, Cột phải là Góp ý
-            col_doc, col_feedback = st.columns([6, 4])
+            col_doc, col_feedback = st.columns([5, 5])
             
             with col_doc:
                 st.markdown('<h3 class="section-title">📑 TÀI LIỆU KỲ HỌP</h3>', unsafe_allow_html=True)
@@ -153,26 +154,36 @@ if menu == "📚 Phòng họp & Tài liệu":
                     st.write("Chưa có tài liệu nào được đăng tải.")
 
             with col_feedback:
-                st.markdown('<h3 class="section-title">✍️ XIN Ý KIẾN ĐẠI BIỂU</h3>', unsafe_allow_html=True)
+                st.markdown('<h3 class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</h3>', unsafe_allow_html=True)
                 
-                # Tab 1: Form Gửi ý kiến, Tab 2: Xem ý kiến đã gửi
                 tab_gui, tab_xem = st.tabs(["💬 Gửi Ý kiến", "📂 Ý kiến đã thu nhận"])
                 
                 with tab_gui:
                     with st.form("form_gop_y", clear_on_submit=True):
-                        nguoi_gui = st.selectbox("👤 Đơn vị / Đại biểu:", DANH_SACH_DON_VI)
-                        noi_dung_gy = st.text_area("📝 Nội dung tham gia ý kiến:")
-                        file_sua_doi = st.file_uploader("📎 Tải lên File văn bản đã sửa trực tiếp (Nếu có):", type=["docx", "doc", "pdf"])
+                        # --- CẤU HÌNH FORM ĐIỀN THÔNG TIN NỘI BỘ ---
+                        ho_ten_gy = st.text_input("👤 Họ và tên người góp ý:")
                         
-                        btn_gui = st.form_submit_button("🚀 GỬI Ý KIẾN ĐÓNG GÓP", use_container_width=True)
+                        col_f1, col_f2 = st.columns(2)
+                        with col_f1: 
+                            chuc_vu_gy = st.selectbox("💼 Chức vụ:", DS_CHUC_VU)
+                        with col_f2: 
+                            don_vi_gy = st.selectbox("🏢 Phòng/Ban/Đơn vị:", DS_DON_VI)
+                        
+                        noi_dung_gy = st.text_area("📝 Nội dung tham gia ý kiến:")
+                        file_sua_doi = st.file_uploader("📎 Tải lên File văn bản đã sửa / File tham luận (Nếu có):", type=["docx", "doc", "pdf"])
+                        
+                        btn_gui = st.form_submit_button("🚀 GỬI Ý KIẾN LÊN HỆ THỐNG", use_container_width=True)
                         
                         if btn_gui:
-                            if nguoi_gui == "Chọn đơn vị...":
-                                st.error("⚠️ Vui lòng chọn Tên đơn vị / Đại biểu của bạn!")
+                            if not ho_ten_gy or chuc_vu_gy == "Chọn chức vụ..." or don_vi_gy == "Chọn đơn vị...":
+                                st.error("⚠️ Vui lòng điền đủ Họ tên, chọn Chức vụ và Đơn vị!")
                             elif not noi_dung_gy and file_sua_doi is None:
-                                st.error("⚠️ Vui lòng nhập nội dung hoặc tải lên file ý kiến!")
+                                st.error("⚠️ Vui lòng nhập nội dung góp ý hoặc tải lên file đính kèm!")
                             else:
                                 with st.spinner("Đang gửi ý kiến về Ban Thư ký..."):
+                                    # Ghép chuỗi thông tin người gửi
+                                    nguoi_gui_tong_hop = f"{ho_ten_gy} ({chuc_vu_gy} - {don_vi_gy})"
+                                    
                                     file_base64 = ""; file_name = ""; file_mimeType = ""
                                     if file_sua_doi is not None:
                                         file_base64 = base64.b64encode(file_sua_doi.getvalue()).decode('utf-8')
@@ -181,14 +192,14 @@ if menu == "📚 Phòng họp & Tài liệu":
                                     
                                     payload = {
                                         "action": "add_y_kien",
-                                        "ma_ch": ma_ch_dang_chon, "nguoi_gop_y": nguoi_gui, "noi_dung": noi_dung_gy,
+                                        "ma_ch": ma_ch_dang_chon, "nguoi_gop_y": nguoi_gui_tong_hop, "noi_dung": noi_dung_gy,
                                         "file_base64": file_base64, "file_name": file_name, "file_mimeType": file_mimeType
                                     }
                                     try:
                                         res = requests.post(WEB_APP_URL, json=payload)
                                         if res.status_code == 200:
                                             st.success("✅ Đã ghi nhận ý kiến thành công!")
-                                            st.cache_data.clear() # Xóa cache để tải lại dl mới
+                                            st.cache_data.clear()
                                         else: st.error("Lỗi máy chủ.")
                                     except Exception as e: st.error(f"Lỗi mạng: {e}")
 
@@ -208,7 +219,7 @@ if menu == "📚 Phòng họp & Tài liệu":
                         st.info("Chưa có ý kiến nào được gửi.")
 
 # ---------------------------------------------------------
-# MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP (Chỉ Admin)
+# MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP
 # ---------------------------------------------------------
 elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
     st.markdown('<h3 class="section-title">➕ TẠO CUỘC HỌP MỚI</h3>', unsafe_allow_html=True)
@@ -237,7 +248,7 @@ elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
                     else: st.error("Lỗi.")
 
 # ---------------------------------------------------------
-# MODULE 3: QUẢN TRỊ ĐĂNG TÀI LIỆU (Chỉ Admin)
+# MODULE 3: QUẢN TRỊ ĐĂNG TÀI LIỆU
 # ---------------------------------------------------------
 elif menu == "📤 Quản trị: Đăng Tài liệu":
     st.markdown('<h3 class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</h3>', unsafe_allow_html=True)
