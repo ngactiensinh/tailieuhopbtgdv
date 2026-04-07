@@ -4,12 +4,6 @@ import base64
 import pandas as pd
 from datetime import datetime
 
-# ==========================================
-# CẤU HÌNH LOGO MỚI (MÃ HÓA BASE64)
-# ==========================================
-# Đây là chuỗi Base64 được tạo từ image_8.png
-base64_logo_string = "iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAACXBIWXMAAAsTAAALEwEAmpwYAAAKT2lDQ1BQaG90b3Nob3AgSNDQy... (CHUỖI BASE64 DÀI... CẦN COPY ĐẦY ĐỦ)"
-
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
 # ---> LINK ỐNG NƯỚC <---
@@ -72,10 +66,21 @@ DS_DON_VI = [
     "Phòng Đoàn thể và các Hội"
 ]
 
+# --- HÀM LẤY LOGO TỪ GITHUB ---
+def get_logo_base64():
+    try:
+        with open("Logo TGDV.png", "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    except:
+        return ""
+
 # --- HÀM TẠO TIÊU ĐỀ Banner ---
 def hien_thi_tieu_de(tieu_de_chinh):
-    # Sử dụng logo được mã hóa base64 trực tiếp
-    logo_html = f'<img src="data:image/png;base64,{base64_logo_string}" style="height: 85px;">'
+    logo_data = get_logo_base64()
+    if logo_data:
+        logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 85px;">'
+    else:
+        logo_html = '<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png" style="height: 85px;">'
     
     st.markdown(f"""
     <div class="header-oval">
@@ -87,7 +92,7 @@ def hien_thi_tieu_de(tieu_de_chinh):
     </div>
     """, unsafe_allow_html=True)
 
-# --- HÀM LẤY DỮ LIỆU ---
+# --- HÀM LẤY DỮ LIỆU TỪ GOOGLE SHEETS ---
 @st.cache_data(ttl=30)
 def load_data():
     try:
@@ -123,15 +128,20 @@ if st.session_state["role"] is None:
 # ==========================================
 # GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
 # ==========================================
-# Thay thế Quốc huy bằng logo mới nhúng (giảm kích thước)
-st.sidebar.markdown(f"""
-    <div style="text-align: center;">
-        <img src="data:image/png;base64,{base64_logo_string}" width="120">
-    </div>
-""", unsafe_allow_html=True)
-st.sidebar.markdown(f"**👤 Quyền:** {'Quản trị viên (Admin)' if st.session_state['role'] == 'Admin' else 'Đại biểu'}")
+# Hiển thị Logo lên Sidebar
+logo_sidebar = get_logo_base64()
+if logo_sidebar:
+    st.sidebar.markdown(f"""
+        <div style="text-align: center;">
+            <img src="data:image/png;base64,{logo_sidebar}" width="120">
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png", width=80)
 
-if st.sidebar.button("🚪 Đăng xuất"):
+st.sidebar.markdown(f"<div style='text-align: center; margin-top: 10px;'><b>👤 Quyền:</b> {'Quản trị viên (Admin)' if st.session_state['role'] == 'Admin' else 'Đại biểu'}</div>", unsafe_allow_html=True)
+
+if st.sidebar.button("🚪 Đăng xuất", use_container_width=True):
     st.session_state["role"] = None
     st.rerun()
 
@@ -150,8 +160,6 @@ df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
 df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
 df_y_kien = pd.DataFrame(data.get("y_kien", []))
 
-# ... (PHẦN CODE CÒN LẠI KHÔNG ĐỔI) ...
-# (GIỮ NGUYÊN MODULE 1, MODULE 2, MODULE 3 ĐÃ VIẾT Ở PHẢN HỒI TRƯỚC)
 # ---------------------------------------------------------
 # MODULE 1: PHÒNG HỌP & TÀI LIỆU
 # ---------------------------------------------------------
