@@ -4,6 +4,12 @@ import base64
 import pandas as pd
 from datetime import datetime
 
+# ==========================================
+# CẤU HÌNH LOGO MỚI (MÃ HÓA BASE64)
+# ==========================================
+# Đây là chuỗi Base64 được tạo từ image_8.png
+base64_logo_string = "iVBORw0KGgoAAAANSUhEUgAAAKAAAACgCAYAAACLz2ctAAAACXBIWXMAAAsTAAALEwEAmpwYAAAKT2lDQ1BQaG90b3Nob3AgSNDQy... (CHUỖI BASE64 DÀI... CẦN COPY ĐẦY ĐỦ)"
+
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
 # ---> LINK ỐNG NƯỚC <---
@@ -31,6 +37,21 @@ st.markdown("""
     .doc-card { background-color: #f8f9fa; border-left: 5px solid #2c5364; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
     .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
     .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
+    .header-oval {
+        background-color: #ffffff;
+        border: 4px solid #C8102E;
+        border-radius: 60px;
+        padding: 15px 30px;
+        margin-bottom: 30px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 25px;
+        flex-wrap: wrap;
+    }
+    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
+    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -51,6 +72,21 @@ DS_DON_VI = [
     "Phòng Đoàn thể và các Hội"
 ]
 
+# --- HÀM TẠO TIÊU ĐỀ Banner ---
+def hien_thi_tieu_de(tieu_de_chinh):
+    # Sử dụng logo được mã hóa base64 trực tiếp
+    logo_html = f'<img src="data:image/png;base64,{base64_logo_string}" style="height: 85px;">'
+    
+    st.markdown(f"""
+    <div class="header-oval">
+        <div>{logo_html}</div>
+        <div>
+            <div class="main-title">{tieu_de_chinh}</div>
+            <div class="sub-title">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 # --- HÀM LẤY DỮ LIỆU ---
 @st.cache_data(ttl=30)
 def load_data():
@@ -67,7 +103,7 @@ if "role" not in st.session_state:
     st.session_state["role"] = None
 
 if st.session_state["role"] is None:
-    st.markdown('<div class="header-banner"><h1>🏛️ HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)</h1><p>BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</p></div>', unsafe_allow_html=True)
+    hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
@@ -87,7 +123,12 @@ if st.session_state["role"] is None:
 # ==========================================
 # GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
 # ==========================================
-st.sidebar.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg/250px-Qu%E1%BB%91c_huy_Vi%E1%BB%87t_Nam.svg.png", width=80)
+# Thay thế Quốc huy bằng logo mới nhúng (giảm kích thước)
+st.sidebar.markdown(f"""
+    <div style="text-align: center;">
+        <img src="data:image/png;base64,{base64_logo_string}" width="120">
+    </div>
+""", unsafe_allow_html=True)
 st.sidebar.markdown(f"**👤 Quyền:** {'Quản trị viên (Admin)' if st.session_state['role'] == 'Admin' else 'Đại biểu'}")
 
 if st.sidebar.button("🚪 Đăng xuất"):
@@ -102,13 +143,15 @@ if st.session_state["role"] == "Admin":
 else:
     menu = st.sidebar.radio("📌 CHỨC NĂNG:", ["📚 Phòng họp & Tài liệu"])
 
-st.markdown('<div class="header-banner"><h1>🏛️ HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)</h1><p>BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</p></div>', unsafe_allow_html=True)
+hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
 
 data = load_data()
 df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
 df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
 df_y_kien = pd.DataFrame(data.get("y_kien", []))
 
+# ... (PHẦN CODE CÒN LẠI KHÔNG ĐỔI) ...
+# (GIỮ NGUYÊN MODULE 1, MODULE 2, MODULE 3 ĐÃ VIẾT Ở PHẢN HỒI TRƯỚC)
 # ---------------------------------------------------------
 # MODULE 1: PHÒNG HỌP & TÀI LIỆU
 # ---------------------------------------------------------
@@ -160,7 +203,6 @@ if menu == "📚 Phòng họp & Tài liệu":
                 
                 with tab_gui:
                     with st.form("form_gop_y", clear_on_submit=True):
-                        # --- CẤU HÌNH FORM ĐIỀN THÔNG TIN NỘI BỘ ---
                         ho_ten_gy = st.text_input("👤 Họ và tên người góp ý:")
                         
                         col_f1, col_f2 = st.columns(2)
@@ -181,7 +223,6 @@ if menu == "📚 Phòng họp & Tài liệu":
                                 st.error("⚠️ Vui lòng nhập nội dung góp ý hoặc tải lên file đính kèm!")
                             else:
                                 with st.spinner("Đang gửi ý kiến về Ban Thư ký..."):
-                                    # Ghép chuỗi thông tin người gửi
                                     nguoi_gui_tong_hop = f"{ho_ten_gy} ({chuc_vu_gy} - {don_vi_gy})"
                                     
                                     file_base64 = ""; file_name = ""; file_mimeType = ""
