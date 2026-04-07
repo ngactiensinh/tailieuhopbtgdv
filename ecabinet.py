@@ -2,7 +2,6 @@ import streamlit as st
 import requests
 import base64
 import pandas as pd
-import os
 from datetime import datetime
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
@@ -13,6 +12,31 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 # --- MẬT KHẨU QUẢN TRỊ ---
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
+
+# --- CSS TÙY CHỈNH (GIAO DIỆN TRUYỀN THỐNG CỦA BAN) ---
+st.markdown("""
+<style>
+    .header-oval {
+        background-color: #ffffff;
+        border: 4px solid #C8102E;
+        border-radius: 60px;
+        padding: 15px 30px;
+        margin-bottom: 30px;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 25px;
+        flex-wrap: wrap;
+    }
+    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
+    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
+    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
+    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
+    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
+    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
+</style>
+""", unsafe_allow_html=True)
 
 # --- DANH SÁCH CHỨC VỤ & ĐƠN VỊ NỘI BỘ ---
 DS_CHUC_VU = [
@@ -31,16 +55,17 @@ DS_DON_VI = [
     "Phòng Đoàn thể và các Hội"
 ]
 
-# --- HÀM ĐỌC ẢNH TỪ GITHUB ---
-def get_image_base64(filename):
-    if os.path.exists(filename):
-        with open(filename, "rb") as f:
+# --- HÀM LẤY LOGO TỪ GITHUB ---
+def get_logo_base64():
+    try:
+        with open("Logo TGDV.png", "rb") as f:
             return base64.b64encode(f.read()).decode("utf-8")
-    return ""
+    except:
+        return ""
 
-# --- HÀM TẠO TIÊU ĐỀ Banner (Cho giao diện bên trong) ---
+# --- HÀM TẠO TIÊU ĐỀ Banner ---
 def hien_thi_tieu_de(tieu_de_chinh):
-    logo_data = get_image_base64("Logo TGDV.png")
+    logo_data = get_logo_base64()
     if logo_data:
         logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 85px;">'
     else:
@@ -66,86 +91,19 @@ def load_data():
         return {"cuoc_hop": [], "tai_lieu": [], "y_kien": []}
 
 # ==========================================
-# KHUNG ĐĂNG NHẬP (GIAO DIỆN iCPV CABINET)
+# KHUNG ĐĂNG NHẬP
 # ==========================================
 if "role" not in st.session_state:
     st.session_state["role"] = None
 
 if st.session_state["role"] is None:
-    # --- CSS SIÊU CẤP CHỈ DÀNH RIÊNG CHO TRANG ĐĂNG NHẬP ---
-    st.markdown("""
-    <style>
-        /* Nền toàn bộ màn hình màu đỏ cờ */
-        .stApp {
-            background: linear-gradient(135deg, #B30000, #800000, #4d0000) !important;
-        }
-        
-        /* Ẩn Header mặc định, Sidebar */
-        header {visibility: hidden;}
-        [data-testid="stSidebar"] {display: none;}
-        
-        /* Biến khung chứa Streamlit thành một khối màu trắng nổi bật */
-        [data-testid="block-container"] {
-            background-color: #ffffff !important;
-            border-radius: 20px !important;
-            padding: 3rem 2rem !important;
-            box-shadow: 0px 15px 40px rgba(0,0,0,0.5) !important;
-            max-width: 950px !important;
-            margin-top: 8vh !important;
-            margin-bottom: 8vh !important;
-        }
-        
-        /* Căn chỉnh Text */
-        .main-title-login {
-            color: #004B87; font-size: 20px; font-weight: 900;
-            text-align: center; line-height: 1.3; margin-top: 10px; margin-bottom: 5px;
-        }
-        .sub-title-login {
-            color: #004B87; font-size: 24px; font-weight: bold;
-            text-align: center; margin-bottom: 20px;
-        }
-        .label-text {
-            color: #C8102E; font-weight: bold; font-size: 14px; margin-bottom: -15px; display: block;
-        }
-        
-        /* Chỉnh nút bấm Đăng nhập */
-        div.stButton > button:first-child {
-            background-color: #C8102E !important; color: white !important;
-            border-radius: 8px !important; border: none !important;
-            font-weight: bold !important; padding: 10px !important; margin-top: 25px !important;
-        }
-        div.stButton > button:first-child:hover { background-color: #8b0000 !important; }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Chia cột bằng Streamlit thuần túy
-    col_img, col_form = st.columns([1.2, 1], gap="large")
+    hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
     
-    with col_img:
-        # Load ảnh an toàn bằng st.image
-        if os.path.exists("phonghop.jpg"):
-            st.image("phonghop.jpg", use_container_width=True)
-        else:
-            st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Vietnam_National_Assembly_Hall.jpg/800px-Vietnam_National_Assembly_Hall.jpg", use_container_width=True)
-    
-    with col_form:
-        # Load Logo
-        logo_data = get_image_base64("Logo TGDV.png")
-        if logo_data:
-            st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_data}" style="height:60px;"></div>', unsafe_allow_html=True)
-        
-        st.markdown('<div class="main-title-login">HỆ THỐNG THÔNG TIN PHỤC VỤ HỌP<br>VÀ XỬ LÝ CÔNG VIỆC</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sub-title-login">Đăng nhập</div>', unsafe_allow_html=True)
-        
-        st.markdown('<span class="label-text">Tên tài khoản *</span>', unsafe_allow_html=True)
-        tk = st.text_input("tk", value="Đại biểu dự họp", disabled=True, label_visibility="hidden")
-        
-        st.markdown('<span class="label-text">Mật khẩu *</span>', unsafe_allow_html=True)
-        pwd = st.text_input("mk", type="password", label_visibility="hidden")
-        
-        st.markdown('<div style="text-align: right; color: #C8102E; font-size: 13px; margin-top: -10px;">Quên mật khẩu?</div>', unsafe_allow_html=True)
-        
-        if st.button("Đăng nhập", use_container_width=True):
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.info("👋 Xin chào! Vui lòng nhập mật khẩu để vào Phòng họp trực tuyến.")
+        pwd = st.text_input("🔑 Nhập mật khẩu truy cập:", type="password")
+        if st.button("🚀 Đăng nhập", use_container_width=True):
             if pwd == PASS_ADMIN:
                 st.session_state["role"] = "Admin"
                 st.rerun()
@@ -154,48 +112,13 @@ if st.session_state["role"] is None:
                 st.rerun()
             else:
                 st.error("❌ Mật khẩu không chính xác!")
-                
-    st.stop() # Dừng vẽ giao diện nếu chưa đăng nhập
+    st.stop()
 
 # ==========================================
 # GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
 # ==========================================
-# --- TRẢ LẠI CSS NỀN TRẮNG VÀ GIAO DIỆN TRUYỀN THỐNG ---
-st.markdown("""
-<style>
-    .stApp { background: #FFFFFF !important; }
-    [data-testid="block-container"] {
-        background-color: transparent !important;
-        border-radius: 0px !important;
-        padding: 3rem 1rem !important;
-        box-shadow: none !important;
-        max-width: 100% !important;
-        margin-top: 0 !important;
-    }
-    .header-oval {
-        background-color: #ffffff;
-        border: 4px solid #C8102E;
-        border-radius: 60px;
-        padding: 15px 30px;
-        margin-bottom: 30px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 25px;
-        flex-wrap: wrap;
-    }
-    .main-title { font-size: 32px; font-weight: 900; color: #C8102E; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
-    .sub-title { font-size: 18px; font-weight: bold; color: #004B87; margin-top: 5px; text-align: center;}
-    .section-title { color: #C8102E; border-bottom: 2px solid #C8102E; padding-bottom: 5px; margin-top: 20px;}
-    .doc-card { background-color: #f8f9fa; border-left: 5px solid #C8102E; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 1px 1px 5px rgba(0,0,0,0.05);}
-    .doc-title { font-size: 16px; font-weight: bold; color: #004B87;}
-    .doc-type { font-size: 13px; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; color: #495057;}
-</style>
-""", unsafe_allow_html=True)
-
 # Hiển thị Logo lên Sidebar
-logo_sidebar = get_image_base64("Logo TGDV.png")
+logo_sidebar = get_logo_base64()
 if logo_sidebar:
     st.sidebar.markdown(f"""
         <div style="text-align: center;">
