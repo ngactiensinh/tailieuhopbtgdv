@@ -31,7 +31,7 @@ DS_DON_VI = [
     "Phòng Đoàn thể và các Hội"
 ]
 
-# --- HÀM ĐỌC ẢNH TỪ GITHUB (TRÁNH LỖI KHI KHÔNG CÓ FILE) ---
+# --- HÀM ĐỌC ẢNH TỪ GITHUB ---
 def get_image_base64(filename):
     if os.path.exists(filename):
         with open(filename, "rb") as f:
@@ -72,112 +72,78 @@ if "role" not in st.session_state:
     st.session_state["role"] = None
 
 if st.session_state["role"] is None:
-    # --- CSS SIÊU CẤP CHO MÀN HÌNH ĐĂNG NHẬP ---
+    # --- CSS SIÊU CẤP CHỈ DÀNH RIÊNG CHO TRANG ĐĂNG NHẬP ---
     st.markdown("""
     <style>
         /* Nền toàn bộ màn hình màu đỏ cờ */
         .stApp {
             background: linear-gradient(135deg, #B30000, #800000, #4d0000) !important;
         }
-        /* Ẩn Header mặc định */
+        
+        /* Ẩn Header mặc định, Sidebar */
         header {visibility: hidden;}
+        [data-testid="stSidebar"] {display: none;}
         
-        /* Căn chỉnh lại padding của Streamlit */
-        .block-container {
-            padding-top: 5vh !important;
-            padding-bottom: 2rem !important;
-            max-width: 1000px !important;
+        /* Biến khung chứa Streamlit thành một khối màu trắng nổi bật */
+        [data-testid="block-container"] {
+            background-color: #ffffff !important;
+            border-radius: 20px !important;
+            padding: 3rem 2rem !important;
+            box-shadow: 0px 15px 40px rgba(0,0,0,0.5) !important;
+            max-width: 950px !important;
+            margin-top: 8vh !important;
+            margin-bottom: 8vh !important;
         }
         
-        /* Box trắng bao bọc form đăng nhập */
-        .login-box {
-            background-color: white;
-            padding: 30px 40px;
-            border-radius: 15px;
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.6);
-            height: 100%;
+        /* Căn chỉnh Text */
+        .main-title-login {
+            color: #004B87; font-size: 20px; font-weight: 900;
+            text-align: center; line-height: 1.3; margin-top: 10px; margin-bottom: 5px;
         }
-        .main-text {
-            color: #004B87;
-            font-size: 20px;
-            font-weight: 900;
-            text-align: center;
-            line-height: 1.3;
-            margin-top: 10px;
-            margin-bottom: 5px;
-            font-family: Arial, sans-serif;
-        }
-        .sub-text {
-            color: #004B87;
-            font-size: 24px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 25px;
+        .sub-title-login {
+            color: #004B87; font-size: 24px; font-weight: bold;
+            text-align: center; margin-bottom: 20px;
         }
         .label-text {
-            font-size: 14px;
-            color: #C8102E;
-            font-weight: bold;
-            margin-bottom: -10px;
+            color: #C8102E; font-weight: bold; font-size: 14px; margin-bottom: -15px; display: block;
         }
-        /* Chỉnh nút bấm màu đỏ */
+        
+        /* Chỉnh nút bấm Đăng nhập */
         div.stButton > button:first-child {
-            background-color: #C8102E !important;
-            color: white !important;
-            border-radius: 8px !important;
-            border: none !important;
-            font-weight: bold !important;
-            padding: 10px !important;
-            margin-top: 15px !important;
+            background-color: #C8102E !important; color: white !important;
+            border-radius: 8px !important; border: none !important;
+            font-weight: bold !important; padding: 10px !important; margin-top: 25px !important;
         }
-        div.stButton > button:first-child:hover {
-            background-color: #8b0000 !important;
-        }
-        .link-text {
-            font-size: 13px;
-            color: #C8102E;
-            text-align: right;
-            cursor: pointer;
-            margin-top: -15px;
-        }
+        div.stButton > button:first-child:hover { background-color: #8b0000 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-    # Khung layout chính (Gộp cả ảnh và form vào chung một hàng)
-    st.markdown('<div style="background-color: white; border-radius: 15px; overflow: hidden; box-shadow: 0px 15px 40px rgba(0,0,0,0.5);">', unsafe_allow_html=True)
+    # Chia cột bằng Streamlit thuần túy
+    col_img, col_form = st.columns([1.2, 1], gap="large")
     
-    col_img, col_form = st.columns([1.2, 1], gap="small")
-    
-    # Cột trái: Ảnh phòng họp
     with col_img:
-        img_phonghop = get_image_base64("phonghop.jpg")
-        if img_phonghop:
-            st.markdown(f'<img src="data:image/jpeg;base64,{img_phonghop}" style="width: 100%; height: 500px; object-fit: cover; display: block; border-right: 2px solid #f0f0f0;">', unsafe_allow_html=True)
+        # Load ảnh an toàn bằng st.image
+        if os.path.exists("phonghop.jpg"):
+            st.image("phonghop.jpg", use_container_width=True)
         else:
-            # Ảnh mặc định nếu chưa up phonghop.jpg
-            st.markdown(f'<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Vietnam_National_Assembly_Hall.jpg/800px-Vietnam_National_Assembly_Hall.jpg" style="width: 100%; height: 500px; object-fit: cover; display: block; border-right: 2px solid #f0f0f0;">', unsafe_allow_html=True)
+            st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Vietnam_National_Assembly_Hall.jpg/800px-Vietnam_National_Assembly_Hall.jpg", use_container_width=True)
     
-    # Cột phải: Form đăng nhập
     with col_form:
-        st.markdown('<div style="padding: 30px 40px 30px 20px;">', unsafe_allow_html=True)
-        
-        # Logo
+        # Load Logo
         logo_data = get_image_base64("Logo TGDV.png")
         if logo_data:
-            st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_data}" style="height:50px;"></div>', unsafe_allow_html=True)
+            st.markdown(f'<div style="text-align:center;"><img src="data:image/png;base64,{logo_data}" style="height:60px;"></div>', unsafe_allow_html=True)
         
-        # Text
-        st.markdown('<div class="main-text">HỆ THỐNG THÔNG TIN PHỤC VỤ HỌP<br>VÀ XỬ LÝ CÔNG VIỆC</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sub-text">Đăng nhập</div>', unsafe_allow_html=True)
+        st.markdown('<div class="main-title-login">HỆ THỐNG THÔNG TIN PHỤC VỤ HỌP<br>VÀ XỬ LÝ CÔNG VIỆC</div>', unsafe_allow_html=True)
+        st.markdown('<div class="sub-title-login">Đăng nhập</div>', unsafe_allow_html=True)
         
-        # Form nhập liệu
-        st.markdown('<p class="label-text">Tên tài khoản *</p>', unsafe_allow_html=True)
-        tk = st.text_input("Tên tài khoản", value="Đại biểu dự họp", label_visibility="collapsed", disabled=True)
+        st.markdown('<span class="label-text">Tên tài khoản *</span>', unsafe_allow_html=True)
+        tk = st.text_input("tk", value="Đại biểu dự họp", disabled=True, label_visibility="hidden")
         
-        st.markdown('<p class="label-text">Mật khẩu *</p>', unsafe_allow_html=True)
-        pwd = st.text_input("Mật khẩu", type="password", label_visibility="collapsed")
+        st.markdown('<span class="label-text">Mật khẩu *</span>', unsafe_allow_html=True)
+        pwd = st.text_input("mk", type="password", label_visibility="hidden")
         
-        st.markdown('<div class="link-text">Quên mật khẩu?</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align: right; color: #C8102E; font-size: 13px; margin-top: -10px;">Quên mật khẩu?</div>', unsafe_allow_html=True)
         
         if st.button("Đăng nhập", use_container_width=True):
             if pwd == PASS_ADMIN:
@@ -189,10 +155,7 @@ if st.session_state["role"] is None:
             else:
                 st.error("❌ Mật khẩu không chính xác!")
                 
-        st.markdown('</div>', unsafe_allow_html=True)
-        
-    st.markdown('</div>', unsafe_allow_html=True)
-    st.stop()
+    st.stop() # Dừng vẽ giao diện nếu chưa đăng nhập
 
 # ==========================================
 # GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
@@ -201,6 +164,14 @@ if st.session_state["role"] is None:
 st.markdown("""
 <style>
     .stApp { background: #FFFFFF !important; }
+    [data-testid="block-container"] {
+        background-color: transparent !important;
+        border-radius: 0px !important;
+        padding: 3rem 1rem !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        margin-top: 0 !important;
+    }
     .header-oval {
         background-color: #ffffff;
         border: 4px solid #C8102E;
