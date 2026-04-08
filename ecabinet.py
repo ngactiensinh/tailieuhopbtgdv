@@ -14,7 +14,7 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS NÂNG CẤP GIAO DIỆN GỌN GÀNG TỐI ĐA ---
+# --- CSS NÂNG CẤP GIAO DIỆN ---
 st.markdown("""
 <style>
     .stApp { background-color: #f4f6f9; }
@@ -27,46 +27,26 @@ st.markdown("""
     }
     .main-title { font-size: 24px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     
-    /* Thẻ cuộc họp nổi bật - Đã làm gọn và căn trái */
+    /* Thẻ cuộc họp nổi bật */
     .featured-card {
-        background-color: #ffffff;
-        border: 1px solid #e0e6ed;
-        border-top: 4px solid #17a2b8;
-        border-radius: 8px;
-        padding: 20px;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.03);
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        background-color: #ffffff; border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8;
+        border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); height: 100%;
+        display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .featured-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0px 6px 15px rgba(0,0,0,0.08);
-    }
-    .featured-title {
-        color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4;
-        flex-grow: 1; text-align: left;
-    }
-    .featured-details {
-        color: #6c757d; font-size: 13px; border-top: 1px dashed #dee2e6; padding-top: 12px; text-align: left; line-height: 1.6;
-    }
+    .featured-card:hover { transform: translateY(-2px); box-shadow: 0px 6px 15px rgba(0,0,0,0.08); }
+    .featured-title { color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4; flex-grow: 1; text-align: left; }
+    .featured-details { color: #6c757d; font-size: 13px; border-top: 1px dashed #dee2e6; padding-top: 12px; text-align: left; line-height: 1.6; }
     
-    /* Các Mác Trạng thái */
+    /* Mác Trạng thái */
     .tag-sap-dien-ra { background-color: #17a2b8; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
     .tag-dang-dien-ra { background-color: #C8102E; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; animation: blinker 1.5s linear infinite;}
     .tag-da-ket-thuc { background-color: #6c757d; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
-    
     @keyframes blinker { 50% { opacity: 0.6; } }
     
-    /* Box Đăng nhập thu gọn */
-    .login-box {
-        background-color: #ffffff;
-        padding: 30px;
-        border-radius: 10px;
-        border: 1px solid #e0e6ed;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.03);
-        text-align: center;
+    /* Tùy chỉnh Form nói chung (Gửi ý kiến & Đăng nhập) */
+    div[data-testid="stForm"] {
+        background-color: #ffffff; border: 1px solid #e0e6ed; border-radius: 8px;
+        padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);
     }
     
     .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 16px; text-transform: uppercase; font-weight: bold;}
@@ -74,7 +54,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- DANH SÁCH ĐƠN VỊ NỘI BỘ ---
 DS_CHUC_VU = ["Chọn chức vụ...", "Trưởng Ban", "Phó Trưởng ban Thường trực", "Phó Trưởng Ban", "Trưởng phòng", "Phó Trưởng phòng", "Chánh Văn phòng", "Phó Chánh Văn phòng", "Chuyên viên", "Khác"]
 DS_DON_VI = ["Chọn đơn vị...", "Ban Tuyên giáo và Dân vận Tỉnh ủy (Lãnh đạo Ban)", "Văn phòng Ban", "Phòng Lý luận chính trị, Lịch sử Đảng", "Phòng Tuyên truyền, Báo chí - Xuất bản", "Phòng Khoa giáo, Văn hóa - Văn nghệ", "Phòng Dân vận các cơ quan Nhà nước, dân tộc và tôn giáo", "Phòng Đoàn thể và các Hội"]
 
@@ -119,7 +98,7 @@ if not df_cuoc_hop.empty:
     df_cuoc_hop[['RealtimeStatus', 'TagClass']] = df_cuoc_hop['Thời gian'].apply(lambda x: pd.Series(get_realtime_status(x)))
 
 # ==========================================
-# MÀN HÌNH ĐĂNG NHẬP GỌN GÀNG
+# MÀN HÌNH ĐĂNG NHẬP
 # ==========================================
 if st.session_state["role"] is None:
     hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY")
@@ -133,7 +112,6 @@ if st.session_state["role"] is None:
             
         st.markdown('<div style="text-align:center; font-size: 16px; font-weight: bold; color: #6c757d; margin-bottom: 15px; text-transform: uppercase;">📌 Các hội nghị nổi bật</div>', unsafe_allow_html=True)
         
-        # Bố cục thông minh: Căn giữa nếu ít cuộc họp
         n = len(featured_df)
         if n == 1: cols = st.columns([1, 2, 1]); target_cols = [cols[1]]
         elif n == 2: cols = st.columns([1, 4, 4, 1]); target_cols = [cols[1], cols[2]]
@@ -154,26 +132,24 @@ if st.session_state["role"] is None:
     
     st.write("---")
     
-    # Ép nhỏ khu vực đăng nhập vào giữa màn hình
+    # Khu vực đăng nhập đã sửa lỗi box trắng
     col_login1, col_login2, col_login3 = st.columns([1.5, 2.5, 1.5])
     with col_login2:
-        st.markdown('<div class="login-box">', unsafe_allow_html=True)
-        st.markdown('<div style="color: #17a2b8; font-size: 24px; margin-bottom: 10px;">🔐</div>', unsafe_allow_html=True)
-        st.markdown('<div style="color: #2c3e50; font-size: 15px; font-weight: bold; margin-bottom: 20px;">XÁC THỰC QUYỀN TRUY CẬP</div>', unsafe_allow_html=True)
-        
-        pwd = st.text_input("Nhập mật khẩu", type="password", placeholder="Nhập mật khẩu tại đây...", label_visibility="collapsed")
-        
-        if st.button("🚀 VÀO HỆ THỐNG", use_container_width=True):
-            if pwd == PASS_ADMIN: 
-                st.session_state["role"] = "Admin"
-                if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
-                st.rerun()
-            elif pwd == PASS_DAI_BIEU: 
-                st.session_state["role"] = "DaiBieu"
-                if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
-                st.rerun()
-            else: st.error("❌ Mật khẩu không chính xác!")
-        st.markdown('</div>', unsafe_allow_html=True)
+        with st.form("login_form", clear_on_submit=True):
+            st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🔐</span><br><b style="color: #2c3e50; font-size: 16px;">XÁC THỰC QUYỀN TRUY CẬP</b></div>', unsafe_allow_html=True)
+            
+            pwd = st.text_input("Nhập mật khẩu", type="password", placeholder="Nhập mật khẩu tại đây...", label_visibility="collapsed")
+            
+            if st.form_submit_button("🚀 VÀO HỆ THỐNG", use_container_width=True):
+                if pwd == PASS_ADMIN: 
+                    st.session_state["role"] = "Admin"
+                    if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
+                    st.rerun()
+                elif pwd == PASS_DAI_BIEU: 
+                    st.session_state["role"] = "DaiBieu"
+                    if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
+                    st.rerun()
+                else: st.error("❌ Mật khẩu không chính xác!")
     st.stop()
 
 # ==========================================
