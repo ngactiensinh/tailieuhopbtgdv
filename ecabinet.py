@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 import base64
 import pandas as pd
-from datetime import datetime
+import re
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
@@ -13,7 +14,7 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS NÂNG CẤP GIAO DIỆN ---
+# --- CSS NÂNG CẤP GIAO DIỆN (CÓ HIỆU ỨNG NHẤP NHÁY) ---
 st.markdown("""
 <style>
     .stApp { background-color: #f4f6f9; }
@@ -24,21 +25,20 @@ st.markdown("""
     }
     .main-title { font-size: 26px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     
-    /* Thẻ cuộc họp nổi bật ngoài màn hình đăng nhập */
+    /* Thẻ cuộc họp nổi bật */
     .featured-card {
         background: linear-gradient(135deg, #ffffff 0%, #f0faff 100%);
-        border: 2px solid #17a2b8;
-        border-radius: 10px;
-        padding: 25px;
-        margin: 0 auto 30px auto;
-        max-width: 800px;
-        box-shadow: 0px 4px 15px rgba(23, 162, 184, 0.2);
-        text-align: center;
+        border: 2px solid #17a2b8; border-radius: 10px; padding: 20px;
+        box-shadow: 0px 4px 15px rgba(23, 162, 184, 0.15); text-align: center; height: 100%;
+        display: flex; flex-direction: column; justify-content: space-between;
     }
-    .featured-tag {
-        background-color: #C8102E; color: white; padding: 4px 12px; 
-        border-radius: 4px; font-size: 13px; font-weight: bold; text-transform: uppercase;
-    }
+    
+    /* CSS cho các mác trạng thái tự động */
+    .tag-sap-dien-ra { background-color: #17a2b8; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; display: inline-block;}
+    .tag-dang-dien-ra { background-color: #C8102E; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; display: inline-block; animation: blinker 1.5s linear infinite;}
+    .tag-da-ket-thuc { background-color: #6c757d; color: white; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase; display: inline-block;}
+    
+    @keyframes blinker { 50% { opacity: 0.6; } }
     
     .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 18px; text-transform: uppercase; font-weight: bold;}
     .doc-card { background-color: #ffffff; border-left: 4px solid #28a745; padding: 15px; border-radius: 4px; margin-bottom: 12px; box-shadow: 0px 2px 5px rgba(0,0,0,0.05);}
@@ -64,50 +64,88 @@ def load_data():
     try: return requests.get(WEB_APP_URL).json()
     except: return {"cuoc_hop": [], "tai_lieu": [], "y_kien": []}
 
+# --- THUẬT TOÁN TÍNH TRẠNG THÁI THEO THỜI GIAN THỰC ---
+def parse_meeting_time(t_str):
+    try: return datetime.strptime(t_str.strip(), "%H:%M, %d/%m/%Y")
+    except: return None
+
+def get_realtime_status(t_str):
+    meeting_time = parse_meeting_time(t_str)
+    if not meeting_time: return "KHÔNG XÁC ĐỊNH", "tag-da-ket-thuc"
+    
+    now = datetime.now()
+    end_time = meeting_time + timedelta(hours=4) # Giả định họp 4 tiếng
+    
+    if now < meeting_time:
+        return "Sắp diễn ra", "tag-sap-dien-ra"
+    elif meeting_time <= now <= end_time:
+        return "Đang diễn ra", "tag-dang-dien-ra"
+    else:
+        return "Đã kết thúc", "tag-da-ket-thuc"
+
 # --- KHỞI TẠO BIẾN TRẠNG THÁI ---
 if "role" not in st.session_state: st.session_state["role"] = None
 if "selected_meeting_id" not in st.session_state: st.session_state["selected_meeting_id"] = None
 
-# --- LẤY DỮ LIỆU SỚM ĐỂ HIỂN THỊ TRƯỚC ĐĂNG NHẬP ---
 data = load_data()
 df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
 df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
 df_y_kien = pd.DataFrame(data.get("y_kien", []))
 
+# Tiền xử lý dữ liệu cuộc họp: Tính ngày và trạng thái
+if not df_cuoc_hop.empty:
+    df_cuoc_hop['ParsedDate'] = df_cuoc_hop['Thời gian'].apply(parse_meeting_time)
+    df_cuoc_hop[['RealtimeStatus', 'TagClass']] = df_cuoc_hop['Thời gian'].apply(lambda x: pd.Series(get_realtime_status(x)))
+
 # ==========================================
-# MÀN HÌNH ĐĂNG NHẬP
+# MÀN HÌNH ĐĂNG NHẬP (TRƯNG BÀY 3 CUỘC HỌP)
 # ==========================================
 if st.session_state["role"] is None:
     hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
     
-    # 🌟 HIỂN THỊ CUỘC HỌP NỔI BẬT NGAY TẠI ĐÂY
-    latest_ch_id = None
     if not df_cuoc_hop.empty:
-        latest_ch = df_cuoc_hop.iloc[-1]
-        latest_ch_id = latest_ch['Mã cuộc họp']
-        st.markdown(f"""
-        <div class="featured-card">
-            <span class="featured-tag">Sắp diễn ra / Mới nhất</span>
-            <h2 style="color: #004B87; margin-top: 15px; margin-bottom: 10px;">{latest_ch['Tên cuộc họp']}</h2>
-            <p style="margin: 0; color: #495057; font-size: 16px;">📍 <b>Địa điểm:</b> {latest_ch['Địa điểm']} &nbsp;|&nbsp; ⏰ <b>Thời gian:</b> {latest_ch['Thời gian']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Lọc ra các cuộc họp Chưa kết thúc, ưu tiên hiển thị
+        active_meetings = df_cuoc_hop[df_cuoc_hop['RealtimeStatus'].isin(["Sắp diễn ra", "Đang diễn ra"])]
+        
+        # Sắp xếp để lấy 3 cuộc họp gần nhất. Nếu ko có thì lấy cuộc họp cũ nhất
+        if active_meetings.empty:
+            featured_df = df_cuoc_hop.sort_values(by='ParsedDate', ascending=False).head(3)
+        else:
+            featured_df = active_meetings.sort_values(by='ParsedDate', ascending=True).head(3)
+            
+        st.markdown('<div style="text-align:center; font-size: 18px; font-weight: bold; color: #2c3e50; margin-bottom: 15px;">🌟 CÁC HỘI NGHỊ NỔI BẬT</div>', unsafe_allow_html=True)
+        
+        cols = st.columns(len(featured_df))
+        for i, (idx, row) in enumerate(featured_df.iterrows()):
+            with cols[i]:
+                st.markdown(f"""
+                <div class="featured-card">
+                    <div>
+                        <span class="{row['TagClass']}">{row['RealtimeStatus']}</span>
+                        <h3 style="color: #004B87; margin-top: 15px; margin-bottom: 10px; font-size: 18px;">{row['Tên cuộc họp']}</h3>
+                    </div>
+                    <div style="margin-top: 10px; color: #495057; font-size: 14px;">
+                        <p style="margin: 0;">📍 <b>{row['Địa điểm']}</b></p>
+                        <p style="margin: 0;">⏰ {row['Thời gian']}</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
     
+    st.write("---")
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.info("🔐 Vui lòng nhập mật khẩu để vào phòng họp hoặc truy cập kho tài liệu.")
         pwd = st.text_input("🔑 Nhập mật khẩu:", type="password")
-        if st.button("🚀 Vào phòng họp", use_container_width=True):
+        if st.button("🚀 XÁC NHẬN ĐĂNG NHẬP", use_container_width=True):
             if pwd == PASS_ADMIN: 
                 st.session_state["role"] = "Admin"
-                if latest_ch_id: st.session_state["selected_meeting_id"] = latest_ch_id
+                if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
                 st.rerun()
             elif pwd == PASS_DAI_BIEU: 
                 st.session_state["role"] = "DaiBieu"
-                if latest_ch_id: st.session_state["selected_meeting_id"] = latest_ch_id
+                if not df_cuoc_hop.empty: st.session_state["selected_meeting_id"] = featured_df.iloc[0]['Mã cuộc họp']
                 st.rerun()
-            else: 
-                st.error("❌ Mật khẩu không chính xác!")
+            else: st.error("❌ Mật khẩu không chính xác!")
     st.stop()
 
 # ==========================================
@@ -125,32 +163,29 @@ hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
 # MODULE 1: PHÒNG HỌP & TÀI LIỆU
 # ---------------------------------------------------------
 if menu == "📚 Phòng họp & Tài liệu":
-    if df_cuoc_hop.empty:
-        st.info("Hiện chưa có cuộc họp nào.")
+    if df_cuoc_hop.empty: st.info("Hiện chưa có cuộc họp nào.")
     else:
-        # Xử lý tự động chọn cuộc họp mới nhất hoặc do người dùng chọn
         ds_lua_chon = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
         danh_sach = ds_lua_chon.tolist()
         
-        index_default = len(danh_sach) - 1 # Mặc định chọn cái cuối cùng (mới nhất)
+        index_default = len(danh_sach) - 1
         if st.session_state.get("selected_meeting_id"):
             for i, val in enumerate(danh_sach):
                 if val.startswith(st.session_state["selected_meeting_id"]):
-                    index_default = i
-                    break
+                    index_default = i; break
                     
         chon_hop = st.selectbox("📂 Lựa chọn Cuộc họp / Hội nghị để xem tài liệu:", danh_sach, index=index_default)
         
         if chon_hop:
             ma_ch = chon_hop.split(" - ")[0]
-            st.session_state["selected_meeting_id"] = ma_ch # Lưu lại lựa chọn
+            st.session_state["selected_meeting_id"] = ma_ch
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
             
             st.markdown(f"<h3 style='color: #2c3e50;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
             c1, c2, c3 = st.columns(3)
             c1.write(f"**⏰ Thời gian:** {thong_tin['Thời gian']}")
             c2.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
-            c3.write(f"**🟢 Trạng thái:** {thong_tin['Trạng thái']}")
+            c3.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
             st.write("---")
             
             col_doc, col_feedback = st.columns([5, 5])
@@ -189,27 +224,34 @@ if menu == "📚 Phòng họp & Tài liệu":
                                 if str(row.get('Link File sửa đổi')) != "nan": st.markdown(f"[📥 Xem file đính kèm]({row.get('Link File sửa đổi')})")
 
 # ---------------------------------------------------------
-# MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP
+# MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP (TỰ ĐỘNG TRẠNG THÁI)
 # ---------------------------------------------------------
 elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
     st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
+    st.info("💡 **Lưu ý quan trọng:** Hệ thống tính toán trạng thái họp tự động. Bạn BẮT BUỘC phải nhập Thời gian đúng chuẩn định dạng bên dưới.")
+    
     with st.form("form_tao_hop", clear_on_submit=True):
         col1, col2 = st.columns([1, 3])
         with col1: ma_ch = st.text_input("Mã Cuộc họp (VD: CH01)*:")
         with col2: ten_ch = st.text_input("Tên Cuộc họp / Hội nghị*:")
-        col3, col4, col5 = st.columns(3)
-        with col3: thoi_gian = st.text_input("Thời gian (VD: 08:00, 15/05/2026):")
+        col3, col4 = st.columns(2)
+        with col3: thoi_gian = st.text_input("Thời gian (BẮT BUỘC NHẬP DẠNG: HH:MM, DD/MM/YYYY)*", placeholder="Ví dụ: 08:30, 20/05/2026")
         with col4: dia_diem = st.text_input("Địa điểm:")
-        with col5: trang_thai = st.selectbox("Trạng thái:", ["Sắp diễn ra", "Đang diễn ra", "Đã kết thúc"])
         
         if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
-            if not ma_ch or not ten_ch: st.error("⚠️ Vui lòng nhập Mã và Tên cuộc họp!")
+            # Kiểm tra định dạng thời gian bằng Regex
+            pattern = r"^\d{2}:\d{2}, \d{2}/\d{2}/\d{4}$"
+            if not ma_ch or not ten_ch: 
+                st.error("⚠️ Vui lòng nhập Mã và Tên cuộc họp!")
+            elif not re.match(pattern, thoi_gian.strip()):
+                st.error("⚠️ Thời gian sai định dạng! Vui lòng nhập đúng như mẫu: 08:30, 20/05/2026")
             else:
                 with st.spinner("Đang lưu..."):
-                    payload = {"action": "add_cuoc_hop", "ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": trang_thai}
+                    # Gửi giá trị "Tự động" cho cột Trạng thái cũ để ko làm hỏng Google Sheet
+                    payload = {"action": "add_cuoc_hop", "ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": "Tự động (Real-time)"}
                     res = requests.post(WEB_APP_URL, json=payload)
                     if res.status_code == 200: st.success("✅ Đã tạo cuộc họp thành công!"); st.cache_data.clear()
-                    else: st.error("Lỗi.")
+                    else: st.error("Lỗi mạng.")
 
 # ---------------------------------------------------------
 # MODULE 3: QUẢN TRỊ ĐĂNG TÀI LIỆU
