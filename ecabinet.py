@@ -51,6 +51,10 @@ st.markdown("""
 DS_CHUC_VU = ["Chọn chức vụ...", "Trưởng Ban", "Phó Trưởng ban Thường trực", "Phó Trưởng Ban", "Trưởng phòng", "Phó Trưởng phòng", "Chánh Văn phòng", "Phó Chánh Văn phòng", "Chuyên viên", "Khác"]
 DS_DON_VI = ["Chọn đơn vị...", "Ban Tuyên giáo và Dân vận Tỉnh ủy (Lãnh đạo Ban)", "Văn phòng Ban", "Phòng Lý luận chính trị, Lịch sử Đảng", "Phòng Tuyên truyền, Báo chí - Xuất bản", "Phòng Khoa giáo, Văn hóa - Văn nghệ", "Phòng Dân vận các cơ quan Nhà nước, dân tộc và tôn giáo", "Phòng Đoàn thể và các Hội"]
 
+# --- HÀM LẤY GIỜ CHUẨN VIỆT NAM (UTC+7) ---
+def get_vn_now():
+    return datetime.utcnow() + timedelta(hours=7)
+
 def get_logo_base64():
     try:
         with open("Logo TGDV.png", "rb") as f: return base64.b64encode(f.read()).decode("utf-8")
@@ -86,7 +90,9 @@ def parse_meeting_time(t_str):
 def get_realtime_status(t_str):
     meeting_time = parse_meeting_time(t_str)
     if not meeting_time: return "KHÔNG XÁC ĐỊNH", "tag-da-ket-thuc"
-    now = datetime.now()
+    
+    # Lấy giờ Việt Nam để so sánh
+    now = get_vn_now()
     end_time = meeting_time + timedelta(hours=4)
     if now < meeting_time: return "Sắp diễn ra", "tag-sap-dien-ra"
     elif meeting_time <= now <= end_time: return "Đang diễn ra", "tag-dang-dien-ra"
@@ -222,7 +228,6 @@ if menu == "📚 Phòng họp & Tài liệu":
                         file_url = str(row.get("Link Google Drive", ""))
                         view_url = file_url
                         
-                        # Sử dụng Google Docs Viewer thay cho MS Office Viewer để tăng tốc độ
                         if any(ext in file_url.lower() for ext in ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']):
                             encoded_url = urllib.parse.quote(file_url, safe='')
                             view_url = f"https://docs.google.com/viewer?url={encoded_url}&embedded=true"
@@ -256,7 +261,7 @@ if menu == "📚 Phòng họp & Tài liệu":
                                     if file_up is not None:
                                         try:
                                             file_ext = file_up.name.split('.')[-1] if '.' in file_up.name else 'bin'
-                                            safe_name = f"YKien_{ma_ch}_{datetime.now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
+                                            safe_name = f"YKien_{ma_ch}_{get_vn_now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
                                             supabase.storage.from_("kho-tai-lieu").upload(path=safe_name, file=file_up.getvalue(), file_options={"content-type": file_up.type})
                                             public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(safe_name)
                                         except Exception as e:
@@ -317,12 +322,12 @@ elif menu == "📤 Quản trị: Đăng Tài liệu":
                     for i, file_up in enumerate(uploaded_files):
                         try:
                             file_ext = file_up.name.split('.')[-1] if '.' in file_up.name else 'bin'
-                            safe_name = f"{ma_ch}_{datetime.now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
+                            safe_name = f"{ma_ch}_{get_vn_now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
                             
                             supabase.storage.from_("kho-tai-lieu").upload(path=safe_name, file=file_up.getvalue(), file_options={"content-type": file_up.type})
                             public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(safe_name)
                             
-                            supabase.table("tai_lieu").insert({"ma_ch": ma_ch, "ma_tl": f"TL{datetime.now().strftime('%H%M%S')}{i}", "ten_tl": file_up.name, "loai_tl": "", "link_file": public_url}).execute()
+                            supabase.table("tai_lieu").insert({"ma_ch": ma_ch, "ma_tl": f"TL{get_vn_now().strftime('%H%M%S')}{i}", "ten_tl": file_up.name, "loai_tl": "", "link_file": public_url}).execute()
                             thanh_cong += 1
                         except Exception as e: st.error(f"⚠️ Lỗi khi tải file '{file_up.name}': {e}")
                             
