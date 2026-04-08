@@ -14,7 +14,7 @@ WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkB
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS NÂNG CẤP GIAO DIỆN & FIX LỖI NÚT DỌC ---
+# --- CSS NÂNG CẤP GIAO DIỆN & FIX LỖI NÚT BẤM (BÊ TÔNG CỐT THÉP) ---
 st.markdown("""
 <style>
     .stApp { background-color: #f4f6f9; }
@@ -27,11 +27,12 @@ st.markdown("""
     }
     .main-title { font-size: 24px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     
-    /* Thẻ cuộc họp nổi bật */
+    /* Thẻ cuộc họp nổi bật - Trả lại padding chuẩn */
     .featured-card {
         background-color: #ffffff; border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8;
-        border-radius: 8px; padding: 20px 20px 50px 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); height: 100%;
+        border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03);
         display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease;
+        margin-bottom: 8px; /* Khoảng cách nhỏ với nút bên dưới */
     }
     .featured-card:hover { transform: translateY(-2px); box-shadow: 0px 6px 15px rgba(0,0,0,0.08); }
     .featured-title { color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4; flex-grow: 1; text-align: left; }
@@ -49,7 +50,7 @@ st.markdown("""
         padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);
     }
     
-    /* STYLE CHO CÁC NÚT BẤM CƠ BẢN TÀN HỆ THỐNG */
+    /* STYLE CHO CÁC NÚT BẤM CƠ BẢN TOÀN HỆ THỐNG */
     div.stButton > button[kind="primary"], div.stButton > button[kind="formSubmit"] {
         background-color: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold;
     }
@@ -57,16 +58,11 @@ st.markdown("""
         background-color: #138496; color: white;
     }
     
-    /* THỦ THUẬT ÉP NÚT THAM GIA (ĐÃ FIX LỖI RỚT CHỮ) */
-    div.stButton { position: relative; }
+    /* STYLE MỚI CHO NÚT THAM GIA: Full-width, dính liền dưới thẻ, cực an toàn */
     div.stButton > button[kind="secondary"] {
-        position: absolute !important; right: 15px !important; top: -55px !important; 
         background-color: #ffffff !important; color: #17a2b8 !important; border: 2px solid #17a2b8 !important;
-        border-radius: 20px !important; padding: 4px 20px !important; font-size: 14px !important; font-weight: bold !important;
-        box-shadow: 0px 2px 5px rgba(0,0,0,0.1) !important; transition: all 0.3s ease !important; z-index: 10 !important;
-        white-space: nowrap !important; /* Chống rớt chữ dọc */
-        min-width: 130px !important; /* Ép cứng chiều rộng tối thiểu */
-        width: auto !important;
+        border-radius: 8px !important; padding: 8px 15px !important; font-size: 14px !important; font-weight: bold !important;
+        transition: all 0.3s ease !important;
     }
     div.stButton > button[kind="secondary"]:hover {
         background-color: #17a2b8 !important; color: #ffffff !important;
@@ -110,6 +106,7 @@ def get_realtime_status(t_str):
 
 if "role" not in st.session_state: st.session_state["role"] = None
 if "selected_meeting_id" not in st.session_state: st.session_state["selected_meeting_id"] = None
+if "meeting_name_temp" not in st.session_state: st.session_state["meeting_name_temp"] = None
 
 data = load_data()
 df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
@@ -152,30 +149,24 @@ if st.session_state["role"] is None:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Nút bấm đã được khóa CSS chống rớt chữ
-                if st.button("🚀 Tham gia", key=f"btn_{row['Mã cuộc họp']}", type="secondary"):
+                # Nút bấm đã sửa: Cho hiển thị ngang (Block width) dưới thẻ
+                if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="secondary", use_container_width=True):
                     st.session_state["selected_meeting_id"] = row['Mã cuộc họp']
+                    st.session_state["meeting_name_temp"] = row['Tên cuộc họp']
                     st.rerun()
     
     st.write("---")
     
     col_login1, col_login2, col_login3 = st.columns([1.5, 2.5, 1.5])
     with col_login2:
-        # Đã Fix lỗi hiển thị tên "None"
         if st.session_state.get("selected_meeting_id"):
-            ten_ch_dang_chon = ""
-            if not df_cuoc_hop.empty:
-                match_ch = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == st.session_state['selected_meeting_id']]
-                if not match_ch.empty:
-                    ten_ch_dang_chon = match_ch.iloc[0]['Tên cuộc họp']
-            if ten_ch_dang_chon:
-                st.success(f"✅ Bạn đang chọn: **{ten_ch_dang_chon}**. Vui lòng nhập mật khẩu để vào phòng họp!")
+            st.success(f"✅ Bạn đang chọn: **{st.session_state['meeting_name_temp']}**. Vui lòng nhập mật khẩu để vào phòng họp!")
             
         with st.form("login_form", clear_on_submit=True):
             st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🔐</span><br><b style="color: #2c3e50; font-size: 16px;">XÁC THỰC QUYỀN TRUY CẬP</b></div>', unsafe_allow_html=True)
             pwd = st.text_input("Nhập mật khẩu", type="password", placeholder="Nhập mật khẩu tại đây...", label_visibility="collapsed")
             
-            if st.form_submit_button("🚀 VÀO HỆ THỐNG", use_container_width=True):
+            if st.form_submit_button("🚀 ĐĂNG NHẬP HỆ THỐNG", use_container_width=True):
                 if pwd == PASS_ADMIN: 
                     st.session_state["role"] = "Admin"
                     if not df_cuoc_hop.empty and not st.session_state.get("selected_meeting_id"): 
