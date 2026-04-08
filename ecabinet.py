@@ -5,6 +5,7 @@ import base64
 import uuid
 from datetime import datetime, timedelta
 from supabase import create_client, Client
+import urllib.parse
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
@@ -218,13 +219,13 @@ if menu == "📚 Phòng họp & Tài liệu":
                 if tl_cua_hop.empty: st.write("Chưa có tài liệu.")
                 else:
                     for idx, row in tl_cua_hop.iterrows():
-                        # --- THUẬT TOÁN TÍCH HỢP BỘ ĐỌC VĂN BẢN TRỰC TUYẾN ---
                         file_url = str(row.get("Link Google Drive", ""))
                         view_url = file_url
                         
-                        # Mượn bộ đọc của MS Office nếu là file Word, Excel, PPT
+                        # Sử dụng Google Docs Viewer thay cho MS Office Viewer để tăng tốc độ
                         if any(ext in file_url.lower() for ext in ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']):
-                            view_url = f"https://view.officeapps.live.com/op/view.aspx?src={file_url}"
+                            encoded_url = urllib.parse.quote(file_url, safe='')
+                            view_url = f"https://docs.google.com/viewer?url={encoded_url}&embedded=true"
                             
                         st.markdown(f"""
                         <div class="doc-card">
