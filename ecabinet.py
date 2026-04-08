@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 import base64
+import uuid
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 
@@ -59,8 +60,8 @@ def hien_thi_tieu_de(tieu_de_chinh):
     logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px;">' if logo_data else ""
     st.markdown(f'<div class="header-box"><div>{logo_html}</div><div><div class="main-title">{tieu_de_chinh}</div><div style="font-size: 13px; font-weight: bold; color: #6c757d; text-align: center; margin-top:3px;">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div></div></div>', unsafe_allow_html=True)
 
-# --- HÀM TẢI DỮ LIỆU SIÊU TỐC TỪ SUPABASE ---
-@st.cache_data(ttl=15) # Tải lại sau mỗi 15 giây
+# --- HÀM TẢI DỮ LIỆU TỪ SUPABASE ---
+@st.cache_data(ttl=15)
 def load_data():
     try:
         ch = supabase.table("cuoc_hop").select("*").execute().data
@@ -171,7 +172,6 @@ if st.session_state["role"] is None:
 logo_sidebar = get_logo_base64()
 if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{logo_sidebar}" width="100"></div>', unsafe_allow_html=True)
 
-# Nút Refresh Dữ liệu cực nhanh
 if st.sidebar.button("🔄 Làm mới Dữ liệu", use_container_width=True):
     st.cache_data.clear()
     st.rerun()
@@ -234,14 +234,27 @@ if menu == "📚 Phòng họp & Tài liệu":
                                     nguoi_gui = f"{ho_ten} ({c_v} - {d_v})"
                                     public_url = ""
                                     if file_up is not None:
-                                        file_name = f"YKien_{ma_ch}_{datetime.now().strftime('%H%M%S')}_{file_up.name}"
-                                        supabase.storage.from_("kho-tai-lieu").upload(file_name, file_up.getvalue(), {"content-type": file_up.type})
-                                        public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(file_name)
+                                        try:
+                                            # Đổi tên file để chống lỗi Tiếng Việt
+                                            file_ext = file_up.name.split('.')[-1] if '.' in file_up.name else 'bin'
+                                            safe_name = f"YKien_{ma_ch}_{datetime.now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
+                                            
+                                            supabase.storage.from_("kho-tai-lieu").upload(
+                                                path=safe_name, 
+                                                file=file_up.getvalue(), 
+                                                file_options={"content-type": file_up.type}
+                                            )
+                                            public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(safe_name)
+                                        except Exception as e:
+                                            st.error(f"⚠️ Lỗi tải file đính kèm: {e}")
+                                            st.stop()
                                     
                                     try:
                                         supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": nguoi_gui, "noi_dung": noi_dung, "link_file": public_url}).execute()
                                         st.success("✅ Thành công!"); st.cache_data.clear()
-                                    except Exception as e: st.error(f"Lỗi: {e}")
+                                    except Exception as e: 
+                                        st.error(f"⚠️ Lỗi lưu ý kiến: {e}")
+                                        
                 with tab_xem:
                     yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
                     if yk_cua_hop.empty: st.info("Chưa có ý kiến.")
@@ -272,7 +285,8 @@ elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
                     try:
                         supabase.table("cuoc_hop").insert({"ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": "Tự động"}).execute()
                         st.success("✅ Đã tạo cuộc họp thành công!"); st.cache_data.clear()
-                    except Exception as e: st.error(f"Lỗi: {e}")
+                    except Exception as e: 
+                        st.error(f"⚠️ Lỗi lưu dữ liệu: {e}")
 
 elif menu == "📤 Quản trị: Đăng Tài liệu":
     st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</div>', unsafe_allow_html=True)
@@ -284,22 +298,41 @@ elif menu == "📤 Quản trị: Đăng Tài liệu":
             uploaded_files = st.file_uploader("📂 Chọn nhiều File cùng lúc:", type=["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"], accept_multiple_files=True)
             
             if st.form_submit_button("🚀 TẢI LÊN VÀ PHÁT HÀNH TÀI LIỆU"):
-                if not uploaded_files: st.error("⚠️ Chọn ít nhất 1 file!")
+                if not uploaded_files: 
+                    st.error("⚠️ Chọn ít nhất 1 file!")
                 else:
                     ma_ch = ch_chon.split(" - ")[0]
                     thanh_cong = 0
                     progress_bar = st.progress(0, text="Bắt đầu tải file...")
+                    
                     for i, file_up in enumerate(uploaded_files):
                         try:
-                            # Đẩy file lên kho Storage
-                            file_name = f"{ma_ch}_{datetime.now().strftime('%H%M%S')}_{file_up.name}"
-                            supabase.storage.from_("kho-tai-lieu").upload(file_name, file_up.getvalue(), {"content-type": file_up.type})
-                            public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(file_name)
+                            # Đổi tên an toàn để không bị lỗi Tiếng Việt trên Kho Supabase
+                            file_ext = file_up.name.split('.')[-1] if '.' in file_up.name else 'bin'
+                            safe_name = f"{ma_ch}_{datetime.now().strftime('%H%M%S')}_{uuid.uuid4().hex[:6]}.{file_ext}"
                             
-                            # Lưu thông tin vào Database
-                            supabase.table("tai_lieu").insert({"ma_ch": ma_ch, "ma_tl": f"TL{i}", "ten_tl": file_up.name, "loai_tl": "", "link_file": public_url}).execute()
+                            # Đẩy file lên kho Storage
+                            supabase.storage.from_("kho-tai-lieu").upload(
+                                path=safe_name, 
+                                file=file_up.getvalue(), 
+                                file_options={"content-type": file_up.type}
+                            )
+                            public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(safe_name)
+                            
+                            # Lưu thông tin vào Database (Vẫn giữ Tên tiếng việt cho người dùng dễ đọc)
+                            supabase.table("tai_lieu").insert({
+                                "ma_ch": ma_ch, 
+                                "ma_tl": f"TL{datetime.now().strftime('%H%M%S')}{i}", 
+                                "ten_tl": file_up.name, 
+                                "loai_tl": "", 
+                                "link_file": public_url
+                            }).execute()
+                            
                             thanh_cong += 1
-                        except Exception as e: pass
+                        except Exception as e: 
+                            st.error(f"⚠️ Lỗi khi tải file '{file_up.name}': {e}")
+                            
                         progress_bar.progress(int(((i + 1) / len(uploaded_files)) * 100), text=f"Đang xử lý: {i+1}/{len(uploaded_files)} file...")
                     
-                    st.success(f"✅ Tải lên hoàn tất ({thanh_cong}/{len(uploaded_files)} file)!"); st.cache_data.clear()
+                    if thanh_cong > 0:
+                        st.success(f"✅ Tải lên hoàn tất ({thanh_cong}/{len(uploaded_files)} file)!"); st.cache_data.clear()
