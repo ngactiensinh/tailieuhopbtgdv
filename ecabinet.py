@@ -24,18 +24,20 @@ st.markdown("""
     }
     .main-title { font-size: 26px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     
-    /* Thẻ cuộc họp nổi bật */
+    /* Thẻ cuộc họp nổi bật ngoài màn hình đăng nhập */
     .featured-card {
         background: linear-gradient(135deg, #ffffff 0%, #f0faff 100%);
         border: 2px solid #17a2b8;
         border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 25px;
+        padding: 25px;
+        margin: 0 auto 30px auto;
+        max-width: 800px;
         box-shadow: 0px 4px 15px rgba(23, 162, 184, 0.2);
+        text-align: center;
     }
     .featured-tag {
-        background-color: #C8102E; color: white; padding: 3px 10px; 
-        border-radius: 4px; font-size: 12px; font-weight: bold; text-transform: uppercase;
+        background-color: #C8102E; color: white; padding: 4px 12px; 
+        border-radius: 4px; font-size: 13px; font-weight: bold; text-transform: uppercase;
     }
     
     .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 18px; text-transform: uppercase; font-weight: bold;}
@@ -66,22 +68,50 @@ def load_data():
 if "role" not in st.session_state: st.session_state["role"] = None
 if "selected_meeting_id" not in st.session_state: st.session_state["selected_meeting_id"] = None
 
+# --- LẤY DỮ LIỆU SỚM ĐỂ HIỂN THỊ TRƯỚC ĐĂNG NHẬP ---
+data = load_data()
+df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
+df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
+df_y_kien = pd.DataFrame(data.get("y_kien", []))
+
 # ==========================================
-# ĐĂNG NHẬP
+# MÀN HÌNH ĐĂNG NHẬP
 # ==========================================
 if st.session_state["role"] is None:
     hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
+    
+    # 🌟 HIỂN THỊ CUỘC HỌP NỔI BẬT NGAY TẠI ĐÂY
+    latest_ch_id = None
+    if not df_cuoc_hop.empty:
+        latest_ch = df_cuoc_hop.iloc[-1]
+        latest_ch_id = latest_ch['Mã cuộc họp']
+        st.markdown(f"""
+        <div class="featured-card">
+            <span class="featured-tag">Sắp diễn ra / Mới nhất</span>
+            <h2 style="color: #004B87; margin-top: 15px; margin-bottom: 10px;">{latest_ch['Tên cuộc họp']}</h2>
+            <p style="margin: 0; color: #495057; font-size: 16px;">📍 <b>Địa điểm:</b> {latest_ch['Địa điểm']} &nbsp;|&nbsp; ⏰ <b>Thời gian:</b> {latest_ch['Thời gian']}</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        pwd = st.text_input("🔑 Nhập mật khẩu truy cập:", type="password")
-        if st.button("🚀 Đăng nhập", use_container_width=True):
-            if pwd == PASS_ADMIN: st.session_state["role"] = "Admin"; st.rerun()
-            elif pwd == PASS_DAI_BIEU: st.session_state["role"] = "DaiBieu"; st.rerun()
-            else: st.error("❌ Mật khẩu không chính xác!")
+        st.info("🔐 Vui lòng nhập mật khẩu để vào phòng họp hoặc truy cập kho tài liệu.")
+        pwd = st.text_input("🔑 Nhập mật khẩu:", type="password")
+        if st.button("🚀 Vào phòng họp", use_container_width=True):
+            if pwd == PASS_ADMIN: 
+                st.session_state["role"] = "Admin"
+                if latest_ch_id: st.session_state["selected_meeting_id"] = latest_ch_id
+                st.rerun()
+            elif pwd == PASS_DAI_BIEU: 
+                st.session_state["role"] = "DaiBieu"
+                if latest_ch_id: st.session_state["selected_meeting_id"] = latest_ch_id
+                st.rerun()
+            else: 
+                st.error("❌ Mật khẩu không chính xác!")
     st.stop()
 
 # ==========================================
-# GIAO DIỆN CHÍNH
+# GIAO DIỆN CHÍNH (SAU KHI ĐĂNG NHẬP)
 # ==========================================
 logo_sidebar = get_logo_base64()
 if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{logo_sidebar}" width="110"></div>', unsafe_allow_html=True)
@@ -90,10 +120,6 @@ if st.sidebar.button("🚪 Đăng xuất", use_container_width=True): st.session
 menu = st.sidebar.radio("📌 CHỨC NĂNG:", ["📚 Phòng họp & Tài liệu", "⚙️ Quản trị: Tạo Cuộc họp", "📤 Quản trị: Đăng Tài liệu"]) if st.session_state["role"] == "Admin" else st.sidebar.radio("📌 CHỨC NĂNG:", ["📚 Phòng họp & Tài liệu"])
 
 hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY (E-CABINET)")
-data = load_data()
-df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
-df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
-df_y_kien = pd.DataFrame(data.get("y_kien", []))
 
 # ---------------------------------------------------------
 # MODULE 1: PHÒNG HỌP & TÀI LIỆU
@@ -102,40 +128,30 @@ if menu == "📚 Phòng họp & Tài liệu":
     if df_cuoc_hop.empty:
         st.info("Hiện chưa có cuộc họp nào.")
     else:
-        # 🌟 PHẦN NỔI BẬT: CUỘC HỌP MỚI NHẤT
-        latest_ch = df_cuoc_hop.iloc[-1]
-        
-        st.markdown(f"""
-        <div class="featured-card">
-            <span class="featured-tag">Mới nhất / Đang diễn ra</span>
-            <h2 style="color: #004B87; margin-top: 10px;">{latest_ch['Tên cuộc họp']}</h2>
-            <p style="margin: 0;">📍 <b>Địa điểm:</b> {latest_ch['Địa điểm']} | ⏰ <b>Thời gian:</b> {latest_ch['Thời gian']}</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        col_btn1, col_btn2, _ = st.columns([2, 2, 4])
-        if col_btn1.button("🔥 VÀO HỌP NGAY", use_container_width=True):
-            st.session_state["selected_meeting_id"] = latest_ch['Mã cuộc họp']
-        
-        st.write("---")
-        
-        # Danh sách chọn cuộc họp khác (Dành cho việc tra cứu tài liệu cũ)
+        # Xử lý tự động chọn cuộc họp mới nhất hoặc do người dùng chọn
         ds_lua_chon = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
-        # Tự động chọn cuộc họp nếu đã bấm nút "Vào họp ngay"
-        index_default = 0
-        if st.session_state["selected_meeting_id"]:
-            try:
-                index_default = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == st.session_state["selected_meeting_id"]].index[0]
-            except: pass
-            
-        chon_hop = st.selectbox("📂 Hoặc chọn cuộc họp khác để tra cứu tài liệu:", ds_lua_chon.tolist(), index=int(index_default))
+        danh_sach = ds_lua_chon.tolist()
+        
+        index_default = len(danh_sach) - 1 # Mặc định chọn cái cuối cùng (mới nhất)
+        if st.session_state.get("selected_meeting_id"):
+            for i, val in enumerate(danh_sach):
+                if val.startswith(st.session_state["selected_meeting_id"]):
+                    index_default = i
+                    break
+                    
+        chon_hop = st.selectbox("📂 Lựa chọn Cuộc họp / Hội nghị để xem tài liệu:", danh_sach, index=index_default)
         
         if chon_hop:
             ma_ch = chon_hop.split(" - ")[0]
-            st.session_state["selected_meeting_id"] = ma_ch
+            st.session_state["selected_meeting_id"] = ma_ch # Lưu lại lựa chọn
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
             
             st.markdown(f"<h3 style='color: #2c3e50;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            c1.write(f"**⏰ Thời gian:** {thong_tin['Thời gian']}")
+            c2.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
+            c3.write(f"**🟢 Trạng thái:** {thong_tin['Trạng thái']}")
+            st.write("---")
             
             col_doc, col_feedback = st.columns([5, 5])
             with col_doc:
@@ -173,30 +189,52 @@ if menu == "📚 Phòng họp & Tài liệu":
                                 if str(row.get('Link File sửa đổi')) != "nan": st.markdown(f"[📥 Xem file đính kèm]({row.get('Link File sửa đổi')})")
 
 # ---------------------------------------------------------
-# MODULE 2 & 3: GIỮ NGUYÊN NHƯ BẢN TRƯỚC
+# MODULE 2: QUẢN TRỊ TẠO CUỘC HỌP
 # ---------------------------------------------------------
 elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
     st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
-    with st.form("form_tao_hop"):
-        c1, c2 = st.columns([1, 3])
-        m_ch = c1.text_input("Mã CH (VD: CH01):")
-        t_ch = c2.text_input("Tên Cuộc họp:")
-        c3, c4, c5 = st.columns(3)
-        t_g = c3.text_input("Thời gian:")
-        d_d = c4.text_input("Địa điểm:")
-        t_t = c5.selectbox("Trạng thái:", ["Sắp diễn ra", "Đang diễn ra", "Đã kết thúc"])
-        if st.form_submit_button("LƯU CUỘC HỌP"):
-            res = requests.post(WEB_APP_URL, json={"action": "add_cuoc_hop", "ma_ch": m_ch, "ten_ch": t_ch, "thoi_gian": t_g, "dia_diem": d_d, "trang_thai": t_t})
-            if res.status_code == 200: st.success("✅ Xong!"); st.cache_data.clear()
+    with st.form("form_tao_hop", clear_on_submit=True):
+        col1, col2 = st.columns([1, 3])
+        with col1: ma_ch = st.text_input("Mã Cuộc họp (VD: CH01)*:")
+        with col2: ten_ch = st.text_input("Tên Cuộc họp / Hội nghị*:")
+        col3, col4, col5 = st.columns(3)
+        with col3: thoi_gian = st.text_input("Thời gian (VD: 08:00, 15/05/2026):")
+        with col4: dia_diem = st.text_input("Địa điểm:")
+        with col5: trang_thai = st.selectbox("Trạng thái:", ["Sắp diễn ra", "Đang diễn ra", "Đã kết thúc"])
+        
+        if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
+            if not ma_ch or not ten_ch: st.error("⚠️ Vui lòng nhập Mã và Tên cuộc họp!")
+            else:
+                with st.spinner("Đang lưu..."):
+                    payload = {"action": "add_cuoc_hop", "ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": trang_thai}
+                    res = requests.post(WEB_APP_URL, json=payload)
+                    if res.status_code == 200: st.success("✅ Đã tạo cuộc họp thành công!"); st.cache_data.clear()
+                    else: st.error("Lỗi.")
 
+# ---------------------------------------------------------
+# MODULE 3: QUẢN TRỊ ĐĂNG TÀI LIỆU
+# ---------------------------------------------------------
 elif menu == "📤 Quản trị: Đăng Tài liệu":
-    st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU NHIỀU FILE</div>', unsafe_allow_html=True)
-    if not df_cuoc_hop.empty:
-        with st.form("form_up_nhieu"):
-            ch_chon = st.selectbox("Chọn cuộc họp:", (df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']).tolist())
-            files = st.file_uploader("Chọn nhiều file cùng lúc:", accept_multiple_files=True)
-            if st.form_submit_button("🚀 TẢI LÊN TẤT CẢ"):
-                for f in files:
-                    payload = {"action": "add_tai_lieu", "ma_ch": ch_chon.split(" - ")[0], "ma_tl": f"TL{datetime.now().strftime('%S%f')}", "ten_tl": f.name, "loai_tl": "", "file_base64": base64.b64encode(f.getvalue()).decode('utf-8'), "file_name": f.name, "file_mimeType": f.type}
-                    requests.post(WEB_APP_URL, json=payload)
-                st.success("✅ Đã tải lên xong!"); st.cache_data.clear()
+    st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</div>', unsafe_allow_html=True)
+    if df_cuoc_hop.empty:
+        st.warning("⚠️ Bạn cần tạo Cuộc họp trước khi đăng tài liệu.")
+    else:
+        with st.form("form_tai_lieu", clear_on_submit=True):
+            ds_cuoc_hop_hien_thi = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
+            ch_chon = st.selectbox("📌 Gắn vào Cuộc họp:", ds_cuoc_hop_hien_thi.tolist())
+            st.info("💡 **Mẹo:** Kéo thả hoặc chọn **nhiều file cùng lúc**. Hệ thống tự động dùng Tên file làm Tên tài liệu.")
+            uploaded_files = st.file_uploader("📂 Chọn các File để đưa lên thư viện:", type=["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"], accept_multiple_files=True)
+            
+            if st.form_submit_button("🚀 TẢI LÊN VÀ PHÁT HÀNH TÀI LIỆU"):
+                if not uploaded_files: st.error("⚠️ Vui lòng chọn ít nhất 1 file để tải lên!")
+                else:
+                    ma_ch = ch_chon.split(" - ")[0]
+                    thanh_cong = 0
+                    progress_bar = st.progress(0, text="Bắt đầu tải file...")
+                    for i, file_up in enumerate(uploaded_files):
+                        payload = {"action": "add_tai_lieu", "ma_ch": ma_ch, "ma_tl": f"TL{datetime.now().strftime('%H%M%S')}{i}", "ten_tl": file_up.name, "loai_tl": "", "file_base64": base64.b64encode(file_up.getvalue()).decode('utf-8'), "file_name": file_up.name, "file_mimeType": file_up.type}
+                        try:
+                            if requests.post(WEB_APP_URL, json=payload).status_code == 200: thanh_cong += 1
+                        except: pass
+                        progress_bar.progress(int(((i + 1) / len(uploaded_files)) * 100), text=f"Đang xử lý: {i+1}/{len(uploaded_files)} file...")
+                    st.success(f"✅ Tải lên hoàn tất ({thanh_cong}/{len(uploaded_files)} file)!"); st.cache_data.clear()
