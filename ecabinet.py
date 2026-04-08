@@ -1,73 +1,46 @@
 import streamlit as st
-import requests
-import base64
 import pandas as pd
 import re
+import base64
 from datetime import datetime, timedelta
+from supabase import create_client, Client
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
-# ---> LINK ỐNG NƯỚC <---
-WEB_APP_URL = "https://script.google.com/macros/s/AKfycby8XxSlcqExB6rW_Ymn3AGxkBcWQWqjJJbHM56Dd8oJfqfovogDVk_KqgnNDMbmmQo0/exec"
+# ==========================================
+# CẤU HÌNH SUPABASE (ĐỘNG CƠ TÊN LỬA)
+# ==========================================
+SUPABASE_URL = "https://qqzsdxhqrdfvxnlurnyb.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxenNkeGhxcmRmdnhubHVybnliIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2MjY0NjAsImV4cCI6MjA5MTIwMjQ2MH0.H62F5zYEZ5l47fS4IdAE2JdRdI7inXQqWG0nvXhn2P8"
+
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except:
+    pass
 
 # --- MẬT KHẨU ---
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS NÂNG CẤP GIAO DIỆN & FIX LỖI NÚT BẤM (BÊ TÔNG CỐT THÉP) ---
+# --- CSS NÂNG CẤP GIAO DIỆN ---
 st.markdown("""
 <style>
     .stApp { background-color: #f4f6f9; }
-    
-    /* Header chính */
-    .header-box {
-        background-color: #ffffff; border-top: 4px solid #17a2b8; border-radius: 8px;
-        padding: 15px 30px; margin-bottom: 30px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05);
-        display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;
-    }
+    .header-box { background-color: #ffffff; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 15px 30px; margin-bottom: 30px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;}
     .main-title { font-size: 24px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
-    
-    /* Thẻ cuộc họp nổi bật - Trả lại padding chuẩn */
-    .featured-card {
-        background-color: #ffffff; border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8;
-        border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03);
-        display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease;
-        margin-bottom: 8px; /* Khoảng cách nhỏ với nút bên dưới */
-    }
+    .featured-card { background-color: #ffffff; border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; margin-bottom: 8px;}
     .featured-card:hover { transform: translateY(-2px); box-shadow: 0px 6px 15px rgba(0,0,0,0.08); }
     .featured-title { color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4; flex-grow: 1; text-align: left; }
     .featured-details { color: #6c757d; font-size: 13px; border-top: 1px dashed #dee2e6; padding-top: 12px; text-align: left; line-height: 1.6; }
-    
-    /* Mác Trạng thái */
     .tag-sap-dien-ra { background-color: #17a2b8; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
     .tag-dang-dien-ra { background-color: #C8102E; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; animation: blinker 1.5s linear infinite;}
     .tag-da-ket-thuc { background-color: #6c757d; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
     @keyframes blinker { 50% { opacity: 0.6; } }
-    
-    /* Tùy chỉnh Form nói chung */
-    div[data-testid="stForm"] {
-        background-color: #ffffff; border: 1px solid #e0e6ed; border-radius: 8px;
-        padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);
-    }
-    
-    /* STYLE CHO CÁC NÚT BẤM CƠ BẢN TOÀN HỆ THỐNG */
-    div.stButton > button[kind="primary"], div.stButton > button[kind="formSubmit"] {
-        background-color: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold;
-    }
-    div.stButton > button[kind="primary"]:hover, div.stButton > button[kind="formSubmit"]:hover {
-        background-color: #138496; color: white;
-    }
-    
-    /* STYLE MỚI CHO NÚT THAM GIA: Full-width, dính liền dưới thẻ, cực an toàn */
-    div.stButton > button[kind="secondary"] {
-        background-color: #ffffff !important; color: #17a2b8 !important; border: 2px solid #17a2b8 !important;
-        border-radius: 8px !important; padding: 8px 15px !important; font-size: 14px !important; font-weight: bold !important;
-        transition: all 0.3s ease !important;
-    }
-    div.stButton > button[kind="secondary"]:hover {
-        background-color: #17a2b8 !important; color: #ffffff !important;
-    }
-    
+    div[data-testid="stForm"] { background-color: #ffffff; border: 1px solid #e0e6ed; border-radius: 8px; padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);}
+    div.stButton > button[kind="primary"], div.stButton > button[kind="formSubmit"] { background-color: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold;}
+    div.stButton > button[kind="primary"]:hover, div.stButton > button[kind="formSubmit"]:hover { background-color: #138496; color: white;}
+    div.stButton > button[kind="secondary"] { background-color: #ffffff !important; color: #17a2b8 !important; border: 2px solid #17a2b8 !important; border-radius: 8px !important; padding: 8px 15px !important; font-size: 14px !important; font-weight: bold !important; transition: all 0.3s ease !important;}
+    div.stButton > button[kind="secondary"]:hover { background-color: #17a2b8 !important; color: #ffffff !important;}
     .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 16px; text-transform: uppercase; font-weight: bold;}
     .doc-card { background-color: #ffffff; border-left: 4px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e0e6ed; box-shadow: 0px 2px 5px rgba(0,0,0,0.02);}
 </style>
@@ -86,10 +59,24 @@ def hien_thi_tieu_de(tieu_de_chinh):
     logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px;">' if logo_data else ""
     st.markdown(f'<div class="header-box"><div>{logo_html}</div><div><div class="main-title">{tieu_de_chinh}</div><div style="font-size: 13px; font-weight: bold; color: #6c757d; text-align: center; margin-top:3px;">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div></div></div>', unsafe_allow_html=True)
 
-@st.cache_data(ttl=30)
+# --- HÀM TẢI DỮ LIỆU SIÊU TỐC TỪ SUPABASE ---
+@st.cache_data(ttl=15) # Tải lại sau mỗi 15 giây
 def load_data():
-    try: return requests.get(WEB_APP_URL).json()
-    except: return {"cuoc_hop": [], "tai_lieu": [], "y_kien": []}
+    try:
+        ch = supabase.table("cuoc_hop").select("*").execute().data
+        tl = supabase.table("tai_lieu").select("*").execute().data
+        yk = supabase.table("y_kien").select("*").execute().data
+        
+        df_ch = pd.DataFrame(ch).rename(columns={'ma_ch': 'Mã cuộc họp', 'ten_ch': 'Tên cuộc họp', 'thoi_gian': 'Thời gian', 'dia_diem': 'Địa điểm', 'trang_thai': 'Trạng thái'})
+        df_tl = pd.DataFrame(tl).rename(columns={'ma_ch': 'Mã cuộc họp', 'ma_tl': 'Mã tài liệu', 'ten_tl': 'Tên tài liệu', 'loai_tl': 'Loại tài liệu', 'link_file': 'Link Google Drive'})
+        df_yk = pd.DataFrame(yk).rename(columns={'ma_ch': 'Mã cuộc họp', 'nguoi_gop_y': 'Tên đơn vị / Đại biểu', 'noi_dung': 'Nội dung góp ý', 'link_file': 'Link File sửa đổi', 'created_at': 'Thời gian gửi'})
+        
+        if not df_yk.empty and 'Thời gian gửi' in df_yk.columns:
+            df_yk['Thời gian gửi'] = pd.to_datetime(df_yk['Thời gian gửi']).dt.tz_convert('Asia/Ho_Chi_Minh').dt.strftime("%H:%M %d/%m/%Y")
+            
+        return {"cuoc_hop": df_ch, "tai_lieu": df_tl, "y_kien": df_yk}
+    except Exception as e:
+        return {"cuoc_hop": pd.DataFrame(), "tai_lieu": pd.DataFrame(), "y_kien": pd.DataFrame()}
 
 def parse_meeting_time(t_str):
     try: return datetime.strptime(t_str.strip(), "%H:%M, %d/%m/%Y")
@@ -108,10 +95,10 @@ if "role" not in st.session_state: st.session_state["role"] = None
 if "selected_meeting_id" not in st.session_state: st.session_state["selected_meeting_id"] = None
 if "meeting_name_temp" not in st.session_state: st.session_state["meeting_name_temp"] = None
 
-data = load_data()
-df_cuoc_hop = pd.DataFrame(data.get("cuoc_hop", []))
-df_tai_lieu = pd.DataFrame(data.get("tai_lieu", []))
-df_y_kien = pd.DataFrame(data.get("y_kien", []))
+data_dict = load_data()
+df_cuoc_hop = data_dict.get("cuoc_hop", pd.DataFrame())
+df_tai_lieu = data_dict.get("tai_lieu", pd.DataFrame())
+df_y_kien = data_dict.get("y_kien", pd.DataFrame())
 
 if not df_cuoc_hop.empty:
     df_cuoc_hop['ParsedDate'] = df_cuoc_hop['Thời gian'].apply(parse_meeting_time)
@@ -137,7 +124,6 @@ if st.session_state["role"] is None:
 
         for i, (idx, row) in enumerate(featured_df.iterrows()):
             with target_cols[i]:
-                # Vẽ thẻ Giao diện
                 st.markdown(f"""
                 <div class="featured-card">
                     <div style="text-align: left;"><span class="{row['TagClass']}">{row['RealtimeStatus']}</span></div>
@@ -149,7 +135,6 @@ if st.session_state["role"] is None:
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Nút bấm đã sửa: Cho hiển thị ngang (Block width) dưới thẻ
                 if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="secondary", use_container_width=True):
                     st.session_state["selected_meeting_id"] = row['Mã cuộc họp']
                     st.session_state["meeting_name_temp"] = row['Tên cuộc họp']
@@ -185,6 +170,12 @@ if st.session_state["role"] is None:
 # ==========================================
 logo_sidebar = get_logo_base64()
 if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{logo_sidebar}" width="100"></div>', unsafe_allow_html=True)
+
+# Nút Refresh Dữ liệu cực nhanh
+if st.sidebar.button("🔄 Làm mới Dữ liệu", use_container_width=True):
+    st.cache_data.clear()
+    st.rerun()
+    
 if st.sidebar.button("🚪 Đăng xuất", use_container_width=True, type="primary"): st.session_state["role"] = None; st.session_state["selected_meeting_id"] = None; st.rerun()
 
 menu = st.sidebar.radio("📌 CHỨC NĂNG:", ["📚 Phòng họp & Tài liệu", "⚙️ Quản trị: Tạo Cuộc họp", "📤 Quản trị: Đăng Tài liệu"]) if st.session_state["role"] == "Admin" else st.sidebar.radio("📌 CHỨC NĂNG:", ["📚 Phòng họp & Tài liệu"])
@@ -239,10 +230,18 @@ if menu == "📚 Phòng họp & Tài liệu":
                         if st.form_submit_button("🚀 GỬI Ý KIẾN", use_container_width=True):
                             if not ho_ten or c_v == "Chọn chức vụ..." or d_v == "Chọn đơn vị...": st.error("⚠️ Điền đủ thông tin!")
                             else:
-                                with st.spinner("Đang gửi..."):
-                                    f_b64 = base64.b64encode(file_up.getvalue()).decode('utf-8') if file_up else ""
-                                    payload = {"action": "add_y_kien", "ma_ch": ma_ch, "nguoi_gop_y": f"{ho_ten} ({c_v} - {d_v})", "noi_dung": noi_dung, "file_base64": f_b64, "file_name": file_up.name if file_up else "", "file_mimeType": file_up.type if file_up else ""}
-                                    if requests.post(WEB_APP_URL, json=payload).status_code == 200: st.success("✅ Thành công!"); st.cache_data.clear()
+                                with st.spinner("Đang xử lý..."):
+                                    nguoi_gui = f"{ho_ten} ({c_v} - {d_v})"
+                                    public_url = ""
+                                    if file_up is not None:
+                                        file_name = f"YKien_{ma_ch}_{datetime.now().strftime('%H%M%S')}_{file_up.name}"
+                                        supabase.storage.from_("kho-tai-lieu").upload(file_name, file_up.getvalue(), {"content-type": file_up.type})
+                                        public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(file_name)
+                                    
+                                    try:
+                                        supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": nguoi_gui, "noi_dung": noi_dung, "link_file": public_url}).execute()
+                                        st.success("✅ Thành công!"); st.cache_data.clear()
+                                    except Exception as e: st.error(f"Lỗi: {e}")
                 with tab_xem:
                     yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
                     if yk_cua_hop.empty: st.info("Chưa có ý kiến.")
@@ -250,50 +249,57 @@ if menu == "📚 Phòng họp & Tài liệu":
                         for _, row in yk_cua_hop.iterrows():
                             with st.expander(f"💬 {row.get('Tên đơn vị / Đại biểu')} - {row.get('Thời gian gửi')}"):
                                 st.write(row.get('Nội dung góp ý'))
-                                if str(row.get('Link File sửa đổi')) != "nan": st.markdown(f"[📥 Xem file đính kèm]({row.get('Link File sửa đổi')})")
+                                if row.get('Link File sửa đổi'): st.markdown(f"[📥 Xem file đính kèm]({row.get('Link File sửa đổi')})")
 
 elif menu == "⚙️ Quản trị: Tạo Cuộc họp":
     st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
-    st.info("💡 Hệ thống tính toán trạng thái họp tự động. Bạn BẮT BUỘC phải nhập Thời gian đúng chuẩn định dạng bên dưới.")
+    st.info("💡 Bạn BẮT BUỘC phải nhập Thời gian đúng chuẩn định dạng: HH:MM, DD/MM/YYYY")
     
     with st.form("form_tao_hop", clear_on_submit=True):
         col1, col2 = st.columns([1, 3])
         with col1: ma_ch = st.text_input("Mã Cuộc họp (VD: CH01)*:")
         with col2: ten_ch = st.text_input("Tên Cuộc họp / Hội nghị*:")
         col3, col4 = st.columns(2)
-        with col3: thoi_gian = st.text_input("Thời gian (BẮT BUỘC NHẬP DẠNG: HH:MM, DD/MM/YYYY)*", placeholder="Ví dụ: 08:30, 20/05/2026")
+        with col3: thoi_gian = st.text_input("Thời gian*", placeholder="Ví dụ: 08:30, 20/05/2026")
         with col4: dia_diem = st.text_input("Địa điểm:")
         
         if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
             pattern = r"^\d{2}:\d{2}, \d{2}/\d{2}/\d{4}$"
             if not ma_ch or not ten_ch: st.error("⚠️ Vui lòng nhập Mã và Tên cuộc họp!")
-            elif not re.match(pattern, thoi_gian.strip()): st.error("⚠️ Thời gian sai định dạng! Vui lòng nhập đúng như mẫu: 08:30, 20/05/2026")
+            elif not re.match(pattern, thoi_gian.strip()): st.error("⚠️ Thời gian sai định dạng! Ví dụ đúng: 08:30, 20/05/2026")
             else:
-                with st.spinner("Đang lưu..."):
-                    payload = {"action": "add_cuoc_hop", "ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": "Tự động (Real-time)"}
-                    if requests.post(WEB_APP_URL, json=payload).status_code == 200: st.success("✅ Đã tạo cuộc họp thành công!"); st.cache_data.clear()
-                    else: st.error("Lỗi mạng.")
+                with st.spinner("Đang lưu vào Supabase..."):
+                    try:
+                        supabase.table("cuoc_hop").insert({"ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": thoi_gian, "dia_diem": dia_diem, "trang_thai": "Tự động"}).execute()
+                        st.success("✅ Đã tạo cuộc họp thành công!"); st.cache_data.clear()
+                    except Exception as e: st.error(f"Lỗi: {e}")
 
 elif menu == "📤 Quản trị: Đăng Tài liệu":
     st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</div>', unsafe_allow_html=True)
-    if df_cuoc_hop.empty: st.warning("⚠️ Bạn cần tạo Cuộc họp trước khi đăng tài liệu.")
+    if df_cuoc_hop.empty: st.warning("⚠️ Bạn cần tạo Cuộc họp trước.")
     else:
         with st.form("form_tai_lieu", clear_on_submit=True):
             ds_cuoc_hop_hien_thi = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
             ch_chon = st.selectbox("📌 Gắn vào Cuộc họp:", ds_cuoc_hop_hien_thi.tolist())
-            st.info("💡 **Mẹo:** Kéo thả hoặc chọn **nhiều file cùng lúc**. Hệ thống tự động dùng Tên file làm Tên tài liệu.")
-            uploaded_files = st.file_uploader("📂 Chọn các File để đưa lên thư viện:", type=["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"], accept_multiple_files=True)
+            uploaded_files = st.file_uploader("📂 Chọn nhiều File cùng lúc:", type=["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"], accept_multiple_files=True)
             
             if st.form_submit_button("🚀 TẢI LÊN VÀ PHÁT HÀNH TÀI LIỆU"):
-                if not uploaded_files: st.error("⚠️ Vui lòng chọn ít nhất 1 file để tải lên!")
+                if not uploaded_files: st.error("⚠️ Chọn ít nhất 1 file!")
                 else:
                     ma_ch = ch_chon.split(" - ")[0]
                     thanh_cong = 0
                     progress_bar = st.progress(0, text="Bắt đầu tải file...")
                     for i, file_up in enumerate(uploaded_files):
-                        payload = {"action": "add_tai_lieu", "ma_ch": ma_ch, "ma_tl": f"TL{datetime.now().strftime('%H%M%S')}{i}", "ten_tl": file_up.name, "loai_tl": "", "file_base64": base64.b64encode(file_up.getvalue()).decode('utf-8'), "file_name": file_up.name, "file_mimeType": file_up.type}
                         try:
-                            if requests.post(WEB_APP_URL, json=payload).status_code == 200: thanh_cong += 1
-                        except: pass
+                            # Đẩy file lên kho Storage
+                            file_name = f"{ma_ch}_{datetime.now().strftime('%H%M%S')}_{file_up.name}"
+                            supabase.storage.from_("kho-tai-lieu").upload(file_name, file_up.getvalue(), {"content-type": file_up.type})
+                            public_url = supabase.storage.from_("kho-tai-lieu").get_public_url(file_name)
+                            
+                            # Lưu thông tin vào Database
+                            supabase.table("tai_lieu").insert({"ma_ch": ma_ch, "ma_tl": f"TL{i}", "ten_tl": file_up.name, "loai_tl": "", "link_file": public_url}).execute()
+                            thanh_cong += 1
+                        except Exception as e: pass
                         progress_bar.progress(int(((i + 1) / len(uploaded_files)) * 100), text=f"Đang xử lý: {i+1}/{len(uploaded_files)} file...")
+                    
                     st.success(f"✅ Tải lên hoàn tất ({thanh_cong}/{len(uploaded_files)} file)!"); st.cache_data.clear()
