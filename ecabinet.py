@@ -62,12 +62,12 @@ def hien_thi_tieu_de(tieu_de_chinh):
     logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px; object-fit: contain;">' if logo_data else ""
     st.markdown(f'<div class="header-box"><div>{logo_html}</div><div><div class="main-title">{tieu_de_chinh}</div><div style="font-size: 13px; font-weight: bold; color: #6c757d; text-align: center; margin-top:3px;">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div></div></div>', unsafe_allow_html=True)
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5) # Giảm TTL xuống 5 giây để cập nhật ý kiến nhanh hơn
 def load_data():
     try:
         ch = supabase.table("cuoc_hop").select("*").order("id", desc=True).execute().data
         tl = supabase.table("tai_lieu").select("*").execute().data
-        yk = supabase.table("y_kien").select("*").execute().data
+        yk = supabase.table("y_kien").select("*").order("id", desc=True).execute().data # Đảo ngược để ý kiến mới nhất lên đầu
         
         df_ch = pd.DataFrame(ch).rename(columns={'ma_ch': 'Mã cuộc họp', 'ten_ch': 'Tên cuộc họp', 'thoi_gian': 'Thời gian', 'thoi_gian_ket_thuc': 'Thời gian kết thúc', 'dia_diem': 'Địa điểm'})
         df_tl = pd.DataFrame(tl).rename(columns={'ma_ch': 'Mã cuộc họp', 'ma_tl': 'Mã tài liệu', 'ten_tl': 'Tên tài liệu', 'link_file': 'Link Google Drive'})
@@ -176,11 +176,9 @@ if menu == "📚 Phòng họp & Tài liệu":
                 c2.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
             
             with c_qr:
-                # Tự động tạo mã QR quét vào cuộc họp
                 qr_data = urllib.parse.quote(f"Hội nghị: {thong_tin['Tên cuộc họp']} | ID: {ma_ch}")
-                st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={qr_data}", caption="Quét QR để nhận tài liệu", width=120)
+                st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={qr_data}", caption="Quét QR nhận tài liệu", width=120)
 
-            # Nếu cuộc họp Đang diễn ra, hiển thị Đồng hồ đếm ngược siêu xịn
             if thong_tin['RealtimeStatus'] == "Đang diễn ra" and thong_tin.get('Thời gian kết thúc'):
                 end_dt = parse_meeting_time(thong_tin['Thời gian kết thúc'])
                 if end_dt:
@@ -211,7 +209,6 @@ if menu == "📚 Phòng họp & Tài liệu":
                     )
 
             st.write("---")
-            # --- HẾT PHẦN ĐỒNG HỒ ---
 
             col_doc, col_feedback = st.columns([5, 5], gap="large")
             with col_doc:
@@ -226,11 +223,12 @@ if menu == "📚 Phòng họp & Tài liệu":
             with col_feedback:
                 st.markdown('<div class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</div>', unsafe_allow_html=True)
                 tab_gui, tab_xem = st.tabs(["💬 Gửi Ý kiến", "📂 Ý kiến đã thu nhận"])
+                
                 with tab_gui:
                     with st.form("form_gop_y", clear_on_submit=True):
                         h_t = st.text_input("👤 Họ và tên:"); c_v = st.selectbox("💼 Chức vụ:", DS_CHUC_VU); d_v = st.selectbox("🏢 Đơn vị:", DS_DON_VI); n_d = st.text_area("📝 Ý kiến đóng góp:"); f_u = st.file_uploader("📎 Đính kèm file văn bản đã sửa (Nếu có):", type=["docx", "pdf"])
                         if st.form_submit_button("🚀 GỬI Ý KIẾN"):
-                            if not h_t or c_v=="Chọn chức vụ..." or d_v=="Chọn đơn vị...": st.error("⚠️ Điền đủ thông tin!")
+                            if not h_t or c_v=="Chọn chức vụ..." or d_v=="Chọn đơn vị...": st.error("⚠️ Điền đủ thông tin bắt buộc!")
                             else:
                                 with st.spinner("Đang gửi..."):
                                     p_u = ""
@@ -239,7 +237,24 @@ if menu == "📚 Phòng họp & Tài liệu":
                                         supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f_u.getvalue(), file_options={"content-type": f_u.type})
                                         p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
                                     supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": f"{h_t} ({c_v} - {d_v})", "noi_dung": n_d, "link_file": p_u}).execute()
-                                    st.success("✅ Thành công!"); st.cache_data.clear()
+                                    st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun() # Load lại ngay lập tức
+
+                # ĐÃ BỔ SUNG PHẦN HIỂN THỊ Ý KIẾN Ở ĐÂY
+                with tab_xem:
+                    yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
+                    if yk_cua_hop.empty:
+                        st.info("Chưa có ý kiến / tham luận nào được gửi.")
+                    else:
+                        for idx, row in yk_cua_hop.iterrows():
+                            file_html = f'<div style="margin-top: 8px;"><a href="{row.get("Link File sửa đổi")}" target="_blank" style="font-size: 13px; color: #C8102E; text-decoration: none; font-weight: bold;">📎 Xem file đính kèm sửa đổi</a></div>' if pd.notna(row.get("Link File sửa đổi")) and row.get("Link File sửa đổi") != '' else ''
+                            st.markdown(f"""
+                            <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                <div style="font-weight: bold; color: #004B87; font-size: 15px;">👤 {row.get('Tên đơn vị / Đại biểu', 'Đại biểu')}</div>
+                                <div style='color:#6c757d; font-size:12px; margin-bottom: 5px;'>🕒 Đã gửi lúc: {row.get('Thời gian gửi', '')}</div>
+                                <div style="font-size: 14px; color: #333; line-height: 1.5;">{row.get('Nội dung góp ý', '')}</div>
+                                {file_html}
+                            </div>
+                            """, unsafe_allow_html=True)
 
 elif menu == "⚙️ Quản trị: Tạo mới":
     st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
