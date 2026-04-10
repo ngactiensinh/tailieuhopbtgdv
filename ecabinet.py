@@ -6,7 +6,6 @@ import uuid
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 import urllib.parse
-import streamlit.components.v1 as components
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
@@ -25,25 +24,35 @@ except:
 PASS_ADMIN = "Admin@2026"
 PASS_DAI_BIEU = "HopBan@2026"
 
-# --- CSS GIAO DIỆN ---
+# --- CSS GIAO DIỆN CÓ BACKGROUND VI MẠCH ---
 st.markdown("""
 <style>
-    .stApp { background-color: #f4f6f9; }
+    /* Hình nền vi mạch điện tử mờ 5% */
+    .stApp { 
+        background-color: #f4f6f9; 
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M20 20 L40 20 L50 30 L50 50 M80 20 L60 20 L50 30 L50 50 M50 50 L50 70 L70 90 L90 90 M50 70 L30 90 L10 90' stroke='%2317a2b8' stroke-width='2' fill='none' opacity='0.05'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='80' cy='20' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='10' cy='90' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='90' cy='90' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%2317a2b8' opacity='0.08'/%3E%3C/svg%3E");
+        background-repeat: repeat;
+    }
+    
     .header-box { background-color: #ffffff; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 15px 30px; margin-bottom: 30px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;}
     .main-title { font-size: 24px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
-    .featured-card { background-color: #ffffff; border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; margin-bottom: 8px;}
+    
+    /* Làm nền của các Form trắng tinh để nổi bật trên nền vi mạch */
+    .featured-card { background-color: rgba(255, 255, 255, 0.95); border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; margin-bottom: 8px;}
     .featured-card:hover { transform: translateY(-2px); box-shadow: 0px 6px 15px rgba(0,0,0,0.08); }
     .featured-title { color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4; flex-grow: 1; text-align: left; }
     .featured-details { color: #6c757d; font-size: 13px; border-top: 1px dashed #dee2e6; padding-top: 12px; text-align: left; line-height: 1.6; }
+    
     .tag-sap-dien-ra { background-color: #17a2b8; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
     .tag-dang-dien-ra { background-color: #C8102E; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block; animation: blinker 1.5s linear infinite;}
     .tag-da-ket-thuc { background-color: #6c757d; color: white; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; display: inline-block;}
     @keyframes blinker { 50% { opacity: 0.6; } }
-    div[data-testid="stForm"] { background-color: #ffffff; border: 1px solid #e0e6ed; border-radius: 8px; padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);}
+    
+    div[data-testid="stForm"] { background-color: rgba(255, 255, 255, 0.95); border: 1px solid #e0e6ed; border-radius: 8px; padding: 25px; box-shadow: 0px 4px 15px rgba(0,0,0,0.03);}
     div.stButton > button[kind="primary"], div.stButton > button[kind="formSubmit"] { background-color: #17a2b8; color: white; border: none; border-radius: 6px; font-weight: bold;}
     div.stButton > button[kind="secondary"] { background-color: #ffffff !important; color: #17a2b8 !important; border: 2px solid #17a2b8 !important; border-radius: 8px !important; padding: 8px 15px !important; font-size: 14px !important; font-weight: bold !important;}
     .section-title { color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 5px; margin-top: 20px; font-size: 16px; text-transform: uppercase; font-weight: bold;}
-    .doc-card { background-color: #ffffff; border-left: 4px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e0e6ed; box-shadow: 0px 2px 5px rgba(0,0,0,0.02);}
+    .doc-card { background-color: rgba(255, 255, 255, 0.95); border-left: 4px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e0e6ed; box-shadow: 0px 2px 5px rgba(0,0,0,0.02);}
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,12 +71,12 @@ def hien_thi_tieu_de(tieu_de_chinh):
     logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px; object-fit: contain;">' if logo_data else ""
     st.markdown(f'<div class="header-box"><div>{logo_html}</div><div><div class="main-title">{tieu_de_chinh}</div><div style="font-size: 13px; font-weight: bold; color: #6c757d; text-align: center; margin-top:3px;">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div></div></div>', unsafe_allow_html=True)
 
-@st.cache_data(ttl=5) # Giảm TTL xuống 5 giây để cập nhật ý kiến nhanh hơn
+@st.cache_data(ttl=5)
 def load_data():
     try:
         ch = supabase.table("cuoc_hop").select("*").order("id", desc=True).execute().data
         tl = supabase.table("tai_lieu").select("*").execute().data
-        yk = supabase.table("y_kien").select("*").order("id", desc=True).execute().data # Đảo ngược để ý kiến mới nhất lên đầu
+        yk = supabase.table("y_kien").select("*").order("id", desc=True).execute().data
         
         df_ch = pd.DataFrame(ch).rename(columns={'ma_ch': 'Mã cuộc họp', 'ten_ch': 'Tên cuộc họp', 'thoi_gian': 'Thời gian', 'thoi_gian_ket_thuc': 'Thời gian kết thúc', 'dia_diem': 'Địa điểm'})
         df_tl = pd.DataFrame(tl).rename(columns={'ma_ch': 'Mã cuộc họp', 'ma_tl': 'Mã tài liệu', 'ten_tl': 'Tên tài liệu', 'link_file': 'Link Google Drive'})
@@ -164,50 +173,14 @@ if menu == "📚 Phòng họp & Tài liệu":
             ma_ch = chon_hop.split(" - ")[0]; st.session_state["selected_meeting_id"] = ma_ch
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
             
-            # --- CHÈN MÃ QR VÀ ĐỒNG HỒ ĐẾM NGƯỢC ---
             st.markdown(f"<h3 style='color: #2c3e50; font-size: 20px; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
             
-            c_info, c_qr = st.columns([3, 1])
-            with c_info:
-                c1, c2 = st.columns(2)
-                c1.write(f"**⏰ Bắt đầu:** {thong_tin['Thời gian']}")
-                c1.write(f"**🏁 Kết thúc:** {thong_tin.get('Thời gian kết thúc', '---')}")
-                c2.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
-                c2.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.write(f"**⏰ Bắt đầu:** {thong_tin['Thời gian']}")
+            c2.write(f"**🏁 Kết thúc:** {thong_tin.get('Thời gian kết thúc', '---')}")
+            c3.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
+            c4.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
             
-            with c_qr:
-                qr_data = urllib.parse.quote(f"Hội nghị: {thong_tin['Tên cuộc họp']} | ID: {ma_ch}")
-                st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={qr_data}", caption="Quét QR nhận tài liệu", width=120)
-
-            if thong_tin['RealtimeStatus'] == "Đang diễn ra" and thong_tin.get('Thời gian kết thúc'):
-                end_dt = parse_meeting_time(thong_tin['Thời gian kết thúc'])
-                if end_dt:
-                    end_iso = end_dt.isoformat()
-                    st.markdown("#### ⏳ ĐẾM NGƯỢC THỜI GIAN HỌP:")
-                    components.html(
-                        f"""
-                        <div style="font-family: Arial, sans-serif; text-align: center; background-color: #C8102E; color: white; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
-                            <span id="timer">Đang tính toán...</span>
-                        </div>
-                        <script>
-                            var countDownDate = new Date("{end_iso}").getTime();
-                            var x = setInterval(function() {{
-                                var now = new Date().getTime();
-                                var distance = countDownDate - now;
-                                if (distance < 0) {{
-                                    clearInterval(x);
-                                    document.getElementById("timer").innerHTML = "ĐÃ HẾT THỜI GIAN HỌP THEO KẾ HOẠCH!";
-                                }} else {{
-                                    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-                                    document.getElementById("timer").innerHTML = hours + " giờ " + minutes + " phút " + seconds + " giây";
-                                }}
-                            }}, 1000);
-                        </script>
-                        """, height=90
-                    )
-
             st.write("---")
 
             col_doc, col_feedback = st.columns([5, 5], gap="large")
@@ -237,9 +210,8 @@ if menu == "📚 Phòng họp & Tài liệu":
                                         supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f_u.getvalue(), file_options={"content-type": f_u.type})
                                         p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
                                     supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": f"{h_t} ({c_v} - {d_v})", "noi_dung": n_d, "link_file": p_u}).execute()
-                                    st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun() # Load lại ngay lập tức
+                                    st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun()
 
-                # ĐÃ BỔ SUNG PHẦN HIỂN THỊ Ý KIẾN Ở ĐÂY
                 with tab_xem:
                     yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
                     if yk_cua_hop.empty:
@@ -248,7 +220,7 @@ if menu == "📚 Phòng họp & Tài liệu":
                         for idx, row in yk_cua_hop.iterrows():
                             file_html = f'<div style="margin-top: 8px;"><a href="{row.get("Link File sửa đổi")}" target="_blank" style="font-size: 13px; color: #C8102E; text-decoration: none; font-weight: bold;">📎 Xem file đính kèm sửa đổi</a></div>' if pd.notna(row.get("Link File sửa đổi")) and row.get("Link File sửa đổi") != '' else ''
                             st.markdown(f"""
-                            <div style="background-color: #f8f9fa; border-left: 4px solid #17a2b8; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <div style="background-color: rgba(255, 255, 255, 0.95); border-left: 4px solid #17a2b8; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
                                 <div style="font-weight: bold; color: #004B87; font-size: 15px;">👤 {row.get('Tên đơn vị / Đại biểu', 'Đại biểu')}</div>
                                 <div style='color:#6c757d; font-size:12px; margin-bottom: 5px;'>🕒 Đã gửi lúc: {row.get('Thời gian gửi', '')}</div>
                                 <div style="font-size: 14px; color: #333; line-height: 1.5;">{row.get('Nội dung góp ý', '')}</div>
