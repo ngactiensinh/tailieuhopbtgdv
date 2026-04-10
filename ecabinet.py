@@ -27,7 +27,6 @@ PASS_DAI_BIEU = "HopBan@2026"
 # --- CSS GIAO DIỆN CÓ BACKGROUND VI MẠCH ---
 st.markdown("""
 <style>
-    /* Hình nền vi mạch điện tử mờ 5% */
     .stApp { 
         background-color: #f4f6f9; 
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cpath d='M20 20 L40 20 L50 30 L50 50 M80 20 L60 20 L50 30 L50 50 M50 50 L50 70 L70 90 L90 90 M50 70 L30 90 L10 90' stroke='%2317a2b8' stroke-width='2' fill='none' opacity='0.05'/%3E%3Ccircle cx='20' cy='20' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='80' cy='20' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='10' cy='90' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='90' cy='90' r='3' fill='%2317a2b8' opacity='0.05'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%2317a2b8' opacity='0.08'/%3E%3C/svg%3E");
@@ -37,7 +36,6 @@ st.markdown("""
     .header-box { background-color: #ffffff; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 15px 30px; margin-bottom: 30px; box-shadow: 0px 4px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;}
     .main-title { font-size: 24px; font-weight: 900; color: #2c3e50; text-transform: uppercase; margin: 0; line-height: 1.2; text-align: center;}
     
-    /* Làm nền của các Form trắng tinh để nổi bật trên nền vi mạch */
     .featured-card { background-color: rgba(255, 255, 255, 0.95); border: 1px solid #e0e6ed; border-top: 4px solid #17a2b8; border-radius: 8px; padding: 20px; box-shadow: 0px 4px 10px rgba(0,0,0,0.03); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; margin-bottom: 8px;}
     .featured-card:hover { transform: translateY(-2px); box-shadow: 0px 6px 15px rgba(0,0,0,0.08); }
     .featured-title { color: #2c3e50; font-size: 16px; font-weight: bold; margin: 12px 0; line-height: 1.4; flex-grow: 1; text-align: left; }
@@ -55,9 +53,6 @@ st.markdown("""
     .doc-card { background-color: rgba(255, 255, 255, 0.95); border-left: 4px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #e0e6ed; box-shadow: 0px 2px 5px rgba(0,0,0,0.02);}
 </style>
 """, unsafe_allow_html=True)
-
-DS_CHUC_VU = ["Chọn chức vụ...", "Trưởng Ban", "Phó Trưởng ban Thường trực", "Phó Trưởng Ban", "Trưởng phòng", "Phó Trưởng phòng", "Chánh Văn phòng", "Phó Chánh Văn phòng", "Chuyên viên", "Khác"]
-DS_DON_VI = ["Chọn đơn vị...", "Ban Tuyên giáo và Dân vận Tỉnh ủy (Lãnh đạo Ban)", "Văn phòng Ban", "Phòng Lý luận chính trị, Lịch sử Đảng", "Phòng Tuyên truyền, Báo chí - Xuất bản", "Phòng Khoa giáo, Văn hóa - Văn nghệ", "Phòng Dân vận các cơ quan Nhà nước, dân tộc và tôn giáo", "Phòng Đoàn thể và các Hội"]
 
 def get_vn_now(): return datetime.utcnow() + timedelta(hours=7)
 
@@ -173,6 +168,9 @@ if menu == "📚 Phòng họp & Tài liệu":
             ma_ch = chon_hop.split(" - ")[0]; st.session_state["selected_meeting_id"] = ma_ch
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
             
+            # Đọc trạng thái Tắt/Bật góp ý từ CSDL (Mặc định là True nếu cột chưa có data)
+            cho_phep_yk = True if pd.isna(thong_tin.get('cho_phep_gop_y')) else bool(thong_tin.get('cho_phep_gop_y'))
+            
             st.markdown(f"<h3 style='color: #2c3e50; font-size: 20px; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
             
             c1, c2, c3, c4 = st.columns(4)
@@ -183,7 +181,12 @@ if menu == "📚 Phòng họp & Tài liệu":
             
             st.write("---")
 
-            col_doc, col_feedback = st.columns([5, 5], gap="large")
+            # Xử lý Chia cột động theo trạng thái
+            if cho_phep_yk:
+                col_doc, col_feedback = st.columns([5, 5], gap="large")
+            else:
+                col_doc = st.container() # Cho full màn hình nếu tắt góp ý
+
             with col_doc:
                 st.markdown('<div class="section-title">📑 TÀI LIỆU KỲ HỌP</div>', unsafe_allow_html=True)
                 tl_cua_hop = df_tai_lieu[df_tai_lieu['Mã cuộc họp'] == ma_ch] if not df_tai_lieu.empty else pd.DataFrame()
@@ -193,40 +196,48 @@ if menu == "📚 Phòng họp & Tài liệu":
                         file_url = str(row.get("Link Google Drive", ""))
                         view_url = f"https://docs.google.com/viewer?url={urllib.parse.quote(file_url, safe='')}&embedded=true" if any(ext in file_url.lower() for ext in ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx']) else file_url
                         st.markdown(f'<div class="doc-card"><div class="doc-title" style="color: #2c3e50; font-size: 15px; margin-bottom: 12px;">📄 {row.get("Tên tài liệu")}</div><div style="display: flex; gap: 10px;"><a href="{view_url}" target="_blank" style="background: #e0f7fa; border: 1px solid #17a2b8; color: #17a2b8; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-decoration: none;">👁️ XEM TRỰC TIẾP</a><a href="{file_url}" target="_blank" style="background: #fff5f5; border: 1px solid #C8102E; color: #C8102E; padding: 4px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; text-decoration: none;">⬇️ TẢI VỀ</a></div></div>', unsafe_allow_html=True)
-            with col_feedback:
-                st.markdown('<div class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</div>', unsafe_allow_html=True)
-                tab_gui, tab_xem = st.tabs(["💬 Gửi Ý kiến", "📂 Ý kiến đã thu nhận"])
-                
-                with tab_gui:
-                    with st.form("form_gop_y", clear_on_submit=True):
-                        h_t = st.text_input("👤 Họ và tên:"); c_v = st.selectbox("💼 Chức vụ:", DS_CHUC_VU); d_v = st.selectbox("🏢 Đơn vị:", DS_DON_VI); n_d = st.text_area("📝 Ý kiến đóng góp:"); f_u = st.file_uploader("📎 Đính kèm file văn bản đã sửa (Nếu có):", type=["docx", "pdf"])
-                        if st.form_submit_button("🚀 GỬI Ý KIẾN"):
-                            if not h_t or c_v=="Chọn chức vụ..." or d_v=="Chọn đơn vị...": st.error("⚠️ Điền đủ thông tin bắt buộc!")
-                            else:
-                                with st.spinner("Đang gửi..."):
-                                    p_u = ""
-                                    if f_u:
-                                        s_n = f"YKien_{ma_ch}_{get_vn_now().strftime('%H%M%S')}_{uuid.uuid4().hex[:4]}.{f_u.name.split('.')[-1]}"
-                                        supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f_u.getvalue(), file_options={"content-type": f_u.type})
-                                        p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
-                                    supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": f"{h_t} ({c_v} - {d_v})", "noi_dung": n_d, "link_file": p_u}).execute()
-                                    st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun()
+            
+            if cho_phep_yk:
+                with col_feedback:
+                    st.markdown('<div class="section-title">✍️ XIN Ý KIẾN / THAM LUẬN</div>', unsafe_allow_html=True)
+                    tab_gui, tab_xem = st.tabs(["💬 Gửi Ý kiến", "📂 Ý kiến đã thu nhận"])
+                    
+                    with tab_gui:
+                        with st.form("form_gop_y", clear_on_submit=True):
+                            # Chuyển đổi thành Ô tự nhập tay
+                            h_t = st.text_input("👤 Họ và tên Đại biểu*:")
+                            c_v = st.text_input("💼 Chức vụ (VD: Phó Giám đốc)*:")
+                            d_v = st.text_input("🏢 Cơ quan / Đơn vị công tác*:")
+                            n_d = st.text_area("📝 Ý kiến đóng góp:")
+                            f_u = st.file_uploader("📎 Đính kèm file văn bản đã sửa (Nếu có):", type=["docx", "pdf"])
+                            
+                            if st.form_submit_button("🚀 GỬI Ý KIẾN"):
+                                if not h_t or not c_v or not d_v: st.error("⚠️ Vui lòng điền đủ Họ tên, Chức vụ và Đơn vị!")
+                                else:
+                                    with st.spinner("Đang gửi..."):
+                                        p_u = ""
+                                        if f_u:
+                                            s_n = f"YKien_{ma_ch}_{get_vn_now().strftime('%H%M%S')}_{uuid.uuid4().hex[:4]}.{f_u.name.split('.')[-1]}"
+                                            supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f_u.getvalue(), file_options={"content-type": f_u.type})
+                                            p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
+                                        supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": f"{h_t} ({c_v} - {d_v})", "noi_dung": n_d, "link_file": p_u}).execute()
+                                        st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun()
 
-                with tab_xem:
-                    yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
-                    if yk_cua_hop.empty:
-                        st.info("Chưa có ý kiến / tham luận nào được gửi.")
-                    else:
-                        for idx, row in yk_cua_hop.iterrows():
-                            file_html = f'<div style="margin-top: 8px;"><a href="{row.get("Link File sửa đổi")}" target="_blank" style="font-size: 13px; color: #C8102E; text-decoration: none; font-weight: bold;">📎 Xem file đính kèm sửa đổi</a></div>' if pd.notna(row.get("Link File sửa đổi")) and row.get("Link File sửa đổi") != '' else ''
-                            st.markdown(f"""
-                            <div style="background-color: rgba(255, 255, 255, 0.95); border-left: 4px solid #17a2b8; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                <div style="font-weight: bold; color: #004B87; font-size: 15px;">👤 {row.get('Tên đơn vị / Đại biểu', 'Đại biểu')}</div>
-                                <div style='color:#6c757d; font-size:12px; margin-bottom: 5px;'>🕒 Đã gửi lúc: {row.get('Thời gian gửi', '')}</div>
-                                <div style="font-size: 14px; color: #333; line-height: 1.5;">{row.get('Nội dung góp ý', '')}</div>
-                                {file_html}
-                            </div>
-                            """, unsafe_allow_html=True)
+                    with tab_xem:
+                        yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
+                        if yk_cua_hop.empty:
+                            st.info("Chưa có ý kiến / tham luận nào được gửi.")
+                        else:
+                            for idx, row in yk_cua_hop.iterrows():
+                                file_html = f'<div style="margin-top: 8px;"><a href="{row.get("Link File sửa đổi")}" target="_blank" style="font-size: 13px; color: #C8102E; text-decoration: none; font-weight: bold;">📎 Xem file đính kèm sửa đổi</a></div>' if pd.notna(row.get("Link File sửa đổi")) and row.get("Link File sửa đổi") != '' else ''
+                                st.markdown(f"""
+                                <div style="background-color: rgba(255, 255, 255, 0.95); border-left: 4px solid #17a2b8; padding: 12px 15px; margin-bottom: 12px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                    <div style="font-weight: bold; color: #004B87; font-size: 15px;">👤 {row.get('Tên đơn vị / Đại biểu', 'Đại biểu')}</div>
+                                    <div style='color:#6c757d; font-size:12px; margin-bottom: 5px;'>🕒 Đã gửi lúc: {row.get('Thời gian gửi', '')}</div>
+                                    <div style="font-size: 14px; color: #333; line-height: 1.5;">{row.get('Nội dung góp ý', '')}</div>
+                                    {file_html}
+                                </div>
+                                """, unsafe_allow_html=True)
 
 elif menu == "⚙️ Quản trị: Tạo mới":
     st.markdown('<div class="section-title">➕ TẠO CUỘC HỌP MỚI</div>', unsafe_allow_html=True)
@@ -238,12 +249,16 @@ elif menu == "⚙️ Quản trị: Tạo mới":
         with col3: t_bd = st.text_input("Thời gian BẮT ĐẦU*", placeholder="HH:MM, DD/MM/YYYY")
         with col4: t_kt = st.text_input("Thời gian KẾT THÚC*", placeholder="HH:MM, DD/MM/YYYY")
         with col5: d_d = st.text_input("Địa điểm:")
+        
+        # Bổ sung Công tắc bật tắt góp ý
+        cp_gy = st.checkbox("✅ Cho phép Đại biểu Gửi Ý kiến / Tham luận trực tuyến", value=True)
+        
         if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
             pattern = r"^\d{2}:\d{2}, \d{2}/\d{2}/\d{4}$"
             if not ma_ch or not ten_ch: st.error("⚠️ Thiếu thông tin!")
             elif not re.match(pattern, t_bd) or not re.match(pattern, t_kt): st.error("⚠️ Sai định dạng thời gian!")
             else:
-                supabase.table("cuoc_hop").insert({"ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": t_bd, "thoi_gian_ket_thuc": t_kt, "dia_diem": d_d}).execute()
+                supabase.table("cuoc_hop").insert({"ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": t_bd, "thoi_gian_ket_thuc": t_kt, "dia_diem": d_d, "cho_phep_gop_y": cp_gy}).execute()
                 st.success("✅ Thành công!"); st.cache_data.clear()
 
 elif menu == "📤 Quản trị: Đăng Tài liệu":
@@ -278,9 +293,14 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
             new_bd = c1.text_input("Thời gian bắt đầu:", value=row_cu['Thời gian'])
             new_kt = c2.text_input("Thời gian kết thúc:", value=row_cu.get('Thời gian kết thúc', ''))
             new_dd = st.text_input("Địa điểm:", value=row_cu['Địa điểm'])
+            
+            # Chỉnh sửa công tắc góp ý
+            cp_gy_cu = True if pd.isna(row_cu.get('cho_phep_gop_y')) else bool(row_cu.get('cho_phep_gop_y'))
+            new_cp_gy = st.checkbox("✅ Cho phép Đại biểu Gửi Ý kiến / Tham luận trực tuyến", value=cp_gy_cu)
+            
             col_b1, col_b2 = st.columns([1, 1])
             if col_b1.form_submit_button("💾 CẬP NHẬT THÔNG TIN", use_container_width=True):
-                supabase.table("cuoc_hop").update({"ten_ch": new_ten, "thoi_gian": new_bd, "thoi_gian_ket_thuc": new_kt, "dia_diem": new_dd}).eq("ma_ch", ma_sua).execute()
+                supabase.table("cuoc_hop").update({"ten_ch": new_ten, "thoi_gian": new_bd, "thoi_gian_ket_thuc": new_kt, "dia_diem": new_dd, "cho_phep_gop_y": new_cp_gy}).eq("ma_ch", ma_sua).execute()
                 st.success("✅ Đã cập nhật!"); st.cache_data.clear(); st.rerun()
             if col_b2.form_submit_button("🗑️ XÓA CUỘC HỌP NÀY", use_container_width=True):
                 supabase.table("cuoc_hop").delete().eq("ma_ch", ma_sua).execute()
