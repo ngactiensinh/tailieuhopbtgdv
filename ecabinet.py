@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timedelta
 from supabase import create_client, Client
 import urllib.parse
+import streamlit.components.v1 as components
 
 st.set_page_config(page_title="E-Cabinet TGDV - Tuyên Quang", page_icon="🏛️", layout="wide")
 
@@ -58,7 +59,7 @@ def get_logo_base64():
 
 def hien_thi_tieu_de(tieu_de_chinh):
     logo_data = get_logo_base64()
-    logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px;">' if logo_data else ""
+    logo_html = f'<img src="data:image/png;base64,{logo_data}" style="height: 65px; object-fit: contain;">' if logo_data else ""
     st.markdown(f'<div class="header-box"><div>{logo_html}</div><div><div class="main-title">{tieu_de_chinh}</div><div style="font-size: 13px; font-weight: bold; color: #6c757d; text-align: center; margin-top:3px;">BAN TUYÊN GIÁO VÀ DÂN VẬN TỈNH ỦY TUYÊN QUANG</div></div></div>', unsafe_allow_html=True)
 
 @st.cache_data(ttl=10)
@@ -86,8 +87,6 @@ def get_realtime_status(start_str, end_str):
     now = get_vn_now()
     
     if not start_time: return "KHÔNG XÁC ĐỊNH", "tag-da-ket-thuc"
-    
-    # Nếu không có giờ kết thúc, mặc định cộng 4 tiếng như cũ
     if not end_time: end_time = start_time + timedelta(hours=4)
     
     if now < start_time: return "Sắp diễn ra", "tag-sap-dien-ra"
@@ -142,7 +141,7 @@ if st.session_state["role"] is None:
 # GIAO DIỆN CHÍNH
 # ==========================================
 logo_sidebar = get_logo_base64()
-if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center;"><img src="data:image/png;base64,{logo_sidebar}" width="100"></div>', unsafe_allow_html=True)
+if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center; margin-bottom: 20px;"><img src="data:image/png;base64,{logo_sidebar}" width="100" style="object-fit: contain;"></div>', unsafe_allow_html=True)
 if st.sidebar.button("🔄 Làm mới dữ liệu", use_container_width=True): st.cache_data.clear(); st.rerun()
 if st.sidebar.button("🚪 Đăng xuất", use_container_width=True, type="primary"): st.session_state["role"] = None; st.session_state["selected_meeting_id"] = None; st.rerun()
 
@@ -160,16 +159,60 @@ if menu == "📚 Phòng họp & Tài liệu":
             for i, val in enumerate(ds_lua_chon):
                 if val.startswith(st.session_state["selected_meeting_id"]): idx_def = i; break
         chon_hop = st.selectbox("📂 Lựa chọn Hội nghị:", ds_lua_chon, index=idx_def)
+        
         if chon_hop:
             ma_ch = chon_hop.split(" - ")[0]; st.session_state["selected_meeting_id"] = ma_ch
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
-            st.markdown(f"<h3 style='color: #2c3e50; font-size: 20px;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
-            c1, c2, c3, c4 = st.columns(4)
-            c1.write(f"**⏰ Bắt đầu:** {thong_tin['Thời gian']}")
-            c2.write(f"**🏁 Kết thúc:** {thong_tin.get('Thời gian kết thúc', '---')}")
-            c3.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
-            c4.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
+            
+            # --- CHÈN MÃ QR VÀ ĐỒNG HỒ ĐẾM NGƯỢC ---
+            st.markdown(f"<h3 style='color: #2c3e50; font-size: 20px; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
+            
+            c_info, c_qr = st.columns([3, 1])
+            with c_info:
+                c1, c2 = st.columns(2)
+                c1.write(f"**⏰ Bắt đầu:** {thong_tin['Thời gian']}")
+                c1.write(f"**🏁 Kết thúc:** {thong_tin.get('Thời gian kết thúc', '---')}")
+                c2.write(f"**📍 Địa điểm:** {thong_tin['Địa điểm']}")
+                c2.markdown(f"**🟢 Trạng thái:** <span class='{thong_tin['TagClass']}' style='padding: 2px 8px;'>{thong_tin['RealtimeStatus']}</span>", unsafe_allow_html=True)
+            
+            with c_qr:
+                # Tự động tạo mã QR quét vào cuộc họp
+                qr_data = urllib.parse.quote(f"Hội nghị: {thong_tin['Tên cuộc họp']} | ID: {ma_ch}")
+                st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={qr_data}", caption="Quét QR để nhận tài liệu", width=120)
+
+            # Nếu cuộc họp Đang diễn ra, hiển thị Đồng hồ đếm ngược siêu xịn
+            if thong_tin['RealtimeStatus'] == "Đang diễn ra" and thong_tin.get('Thời gian kết thúc'):
+                end_dt = parse_meeting_time(thong_tin['Thời gian kết thúc'])
+                if end_dt:
+                    end_iso = end_dt.isoformat()
+                    st.markdown("#### ⏳ ĐẾM NGƯỢC THỜI GIAN HỌP:")
+                    components.html(
+                        f"""
+                        <div style="font-family: Arial, sans-serif; text-align: center; background-color: #C8102E; color: white; padding: 15px; border-radius: 8px; font-size: 32px; font-weight: bold; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                            <span id="timer">Đang tính toán...</span>
+                        </div>
+                        <script>
+                            var countDownDate = new Date("{end_iso}").getTime();
+                            var x = setInterval(function() {{
+                                var now = new Date().getTime();
+                                var distance = countDownDate - now;
+                                if (distance < 0) {{
+                                    clearInterval(x);
+                                    document.getElementById("timer").innerHTML = "ĐÃ HẾT THỜI GIAN HỌP THEO KẾ HOẠCH!";
+                                }} else {{
+                                    var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                    var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                                    var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                                    document.getElementById("timer").innerHTML = hours + " giờ " + minutes + " phút " + seconds + " giây";
+                                }}
+                            }}, 1000);
+                        </script>
+                        """, height=90
+                    )
+
             st.write("---")
+            # --- HẾT PHẦN ĐỒNG HỒ ---
+
             col_doc, col_feedback = st.columns([5, 5], gap="large")
             with col_doc:
                 st.markdown('<div class="section-title">📑 TÀI LIỆU KỲ HỌP</div>', unsafe_allow_html=True)
