@@ -22,7 +22,7 @@ except:
 
 # --- MẬT KHẨU ---
 PASS_ADMIN = "Admin@2026"
-PASS_DAI_BIEU = "HopBan@2026"
+PASS_DAI_BIEU = "TGDV@2026"
 
 # --- CSS GIAO DIỆN CÓ BACKGROUND VI MẠCH ---
 st.markdown("""
