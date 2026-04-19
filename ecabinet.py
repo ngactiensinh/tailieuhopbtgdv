@@ -303,14 +303,12 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
                 supabase.table("cuoc_hop").update({"ten_ch": new_ten, "thoi_gian": new_bd, "thoi_gian_ket_thuc": new_kt, "dia_diem": new_dd, "cho_phep_gop_y": new_cp_gy}).eq("ma_ch", ma_sua).execute()
                 st.success("✅ Đã cập nhật!"); st.cache_data.clear(); st.rerun()
             if col_b2.form_submit_button("🗑️ XÓA CUỘC HỌP NÀY", use_container_width=True):
-    try:
-        # BƯỚC 1: XÓA SẠCH TÀI LIỆU LIÊN QUAN TRƯỚC
-        # (Lưu ý: Nếu bảng tài liệu của sếp tên khác thì thay chữ "tai_lieu" nhé)
+    try: # Dòng này thụt lề vào 1 Tab so với chữ 'if'
+        # Các dòng dưới này thụt lề vào 1 Tab so với chữ 'try'
         supabase.table("tai_lieu").delete().eq("ma_ch", ma_sua).execute()
-        
-        # BƯỚC 2: XÓA CUỘC HỌP SAU
         supabase.table("cuoc_hop").delete().eq("ma_ch", ma_sua).execute()
-        
-        st.warning("🔥 Đã xóa sạch cuộc họp và toàn bộ tài liệu!"); st.cache_data.clear(); st.rerun()
-    except Exception as e:
+        st.warning("🔥 Đã xóa sạch cuộc họp và toàn bộ tài liệu!")
+        st.cache_data.clear()
+        st.rerun()
+    except Exception as e: # Dòng này thẳng hàng với chữ 'try'
         st.error(f"Lỗi khi xóa: {e}")
