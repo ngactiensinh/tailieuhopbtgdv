@@ -22,7 +22,6 @@ except:
 
 # --- MẬT KHẨU ---
 PASS_ADMIN = "Admin@2026"
-# PASS_DAI_BIEU = "TGDV@2026" (Đã tạm ẩn theo chỉ đạo để đại biểu vào thẳng)
 
 # --- CSS GIAO DIỆN CÓ BACKGROUND VI MẠCH ---
 st.markdown("""
@@ -117,41 +116,33 @@ if st.session_state["role"] is None:
     if not df_cuoc_hop.empty:
         active_meetings = df_cuoc_hop[df_cuoc_hop['RealtimeStatus'].isin(["Sắp diễn ra", "Đang diễn ra"])]
         featured_df = active_meetings.sort_values(by='ParsedStart', ascending=True).head(3) if not active_meetings.empty else df_cuoc_hop.head(3)
-        st.markdown('<div style="text-align:center; font-size: 16px; font-weight: bold; color: #6c757d; margin-bottom: 15px; text-transform: uppercase;">📌 Các hội nghị nổi bật</div>', unsafe_allow_html=True)
+        st.markdown('<div style="text-align:center; font-size: 16px; font-weight: bold; color: #17a2b8; margin-bottom: 15px; text-transform: uppercase;">📌 BẤM VÀO ĐỂ THAM GIA HỘI NGHỊ</div>', unsafe_allow_html=True)
         n = len(featured_df)
         cols = st.columns([1, 2, 1]) if n == 1 else (st.columns([1, 4, 4, 1]) if n == 2 else st.columns(3))
         target_cols = [cols[1]] if n == 1 else ([cols[1], cols[2]] if n == 2 else cols)
         for i, (idx, row) in enumerate(featured_df.iterrows()):
             with target_cols[i]:
                 st.markdown(f'<div class="featured-card"><div style="text-align: left;"><span class="{row["TagClass"]}">{row["RealtimeStatus"]}</span></div><div class="featured-title">{row["Tên cuộc họp"]}</div><div class="featured-details"><b>📍 Địa điểm:</b> {row["Địa điểm"]}<br><b>⏰ Bắt đầu:</b> {row["Thời gian"]}<br><b>🏁 Kết thúc:</b> {row.get("Thời gian kết thúc", "Chưa xác định")}</div></div>', unsafe_allow_html=True)
-                if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="secondary", use_container_width=True):
-                    st.session_state["selected_meeting_id"] = row['Mã cuộc họp']; st.rerun()
+                
+                # NÚT BẤM THẦN KỲ ĐÃ ĐƯỢC NÂNG CẤP
+                if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="primary", use_container_width=True):
+                    st.session_state["selected_meeting_id"] = row['Mã cuộc họp']
+                    st.session_state["role"] = "DaiBieu" # Cho vào thẳng với quyền Đại biểu luôn
+                    st.rerun()
     st.write("---")
     
     col_login1, col_login2, col_login3 = st.columns([1.5, 2.5, 1.5])
     with col_login2:
-        if st.session_state.get("selected_meeting_id"):
-            match_ch = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == st.session_state['selected_meeting_id']]
-            if not match_ch.empty: st.success(f"✅ Bạn đang chọn: **{match_ch.iloc[0]['Tên cuộc họp']}**")
-        
         with st.form("login_form", clear_on_submit=True):
-            st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🚀</span><br><b style="color: #2c3e50; font-size: 16px;">TRUY CẬP VÀO HỆ THỐNG TÀI LIỆU</b></div>', unsafe_allow_html=True)
+            st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🔐</span><br><b style="color: #2c3e50; font-size: 16px;">DÀNH CHO QUẢN TRỊ VIÊN</b></div>', unsafe_allow_html=True)
+            pwd = st.text_input("Mật khẩu Admin:", type="password", placeholder="Nhập mật khẩu quản trị (Đại biểu không cần nhập)...")
             
-            # Ô nhập pass giờ chỉ dành cho Admin, chú thích rõ ràng
-            pwd = st.text_input("Mật khẩu Quản trị viên (Chỉ Admin):", type="password", placeholder="Đại biểu vui lòng để trống ô này...")
-            
-            if st.form_submit_button("🚪 VÀO PHÒNG HỌP KHÔNG GIẤY", use_container_width=True):
-                if pwd == "": 
-                    # Nếu để trống mật khẩu -> Cho vào thẳng với quyền Đại biểu
-                    st.session_state["role"] = "DaiBieu"
-                    st.rerun()
-                elif pwd == PASS_ADMIN: 
-                    # Nếu nhập đúng mật khẩu Admin -> Cho vào với quyền Quản trị
+            if st.form_submit_button("🚪 ĐĂNG NHẬP ADMIN", use_container_width=True):
+                if pwd == PASS_ADMIN: 
                     st.session_state["role"] = "Admin"
                     st.rerun()
                 else: 
-                    # Báo lỗi nhẹ nhàng nếu gõ linh tinh
-                    st.error("❌ Sai mật khẩu Quản trị! (Nếu là Đại biểu, vui lòng xoá trắng ô mật khẩu và ấn nút)")
+                    st.error("❌ Sai mật khẩu Quản trị!")
     st.stop()
 
 # ==========================================
@@ -217,7 +208,6 @@ if menu == "📚 Phòng họp & Tài liệu":
                     
                     with tab_gui:
                         with st.form("form_gop_y", clear_on_submit=True):
-                            # Chuyển đổi thành Ô tự nhập tay
                             h_t = st.text_input("👤 Họ và tên Đại biểu*:")
                             c_v = st.text_input("💼 Chức vụ (VD: Phó Giám đốc)*:")
                             d_v = st.text_input("🏢 Cơ quan / Đơn vị công tác*:")
@@ -263,7 +253,6 @@ elif menu == "⚙️ Quản trị: Tạo mới":
         with col4: t_kt = st.text_input("Thời gian KẾT THÚC*", placeholder="HH:MM, DD/MM/YYYY")
         with col5: d_d = st.text_input("Địa điểm:")
         
-        # Bổ sung Công tắc bật tắt góp ý
         cp_gy = st.checkbox("✅ Cho phép Đại biểu Gửi Ý kiến / Tham luận trực tuyến", value=True)
         
         if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
@@ -307,7 +296,6 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
             new_kt = c2.text_input("Thời gian kết thúc:", value=row_cu.get('Thời gian kết thúc', ''))
             new_dd = st.text_input("Địa điểm:", value=row_cu['Địa điểm'])
             
-            # Chỉnh sửa công tắc góp ý
             cp_gy_cu = True if pd.isna(row_cu.get('cho_phep_gop_y')) else bool(row_cu.get('cho_phep_gop_y'))
             new_cp_gy = st.checkbox("✅ Cho phép Đại biểu Gửi Ý kiến / Tham luận trực tuyến", value=cp_gy_cu)
             
