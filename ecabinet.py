@@ -22,7 +22,7 @@ except:
 
 # --- MẬT KHẨU ---
 PASS_ADMIN = "Admin@2026"
-PASS_DAI_BIEU = "TGDV@2026"
+# PASS_DAI_BIEU = "TGDV@2026" (Đã tạm ẩn theo chỉ đạo để đại biểu vào thẳng)
 
 # --- CSS GIAO DIỆN CÓ BACKGROUND VI MẠCH ---
 st.markdown("""
@@ -110,7 +110,7 @@ if not df_cuoc_hop.empty:
     df_cuoc_hop[['RealtimeStatus', 'TagClass']] = df_cuoc_hop.apply(lambda r: pd.Series(get_realtime_status(r['Thời gian'], r.get('Thời gian kết thúc'))), axis=1)
 
 # ==========================================
-# MÀN HÌNH ĐĂNG NHẬP
+# MÀN HÌNH ĐĂNG NHẬP VÀ CHỌN PHÒNG HỌP
 # ==========================================
 if st.session_state["role"] is None:
     hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY")
@@ -127,27 +127,40 @@ if st.session_state["role"] is None:
                 if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="secondary", use_container_width=True):
                     st.session_state["selected_meeting_id"] = row['Mã cuộc họp']; st.rerun()
     st.write("---")
+    
     col_login1, col_login2, col_login3 = st.columns([1.5, 2.5, 1.5])
     with col_login2:
         if st.session_state.get("selected_meeting_id"):
             match_ch = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == st.session_state['selected_meeting_id']]
             if not match_ch.empty: st.success(f"✅ Bạn đang chọn: **{match_ch.iloc[0]['Tên cuộc họp']}**")
+        
         with st.form("login_form", clear_on_submit=True):
-            st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🔐</span><br><b style="color: #2c3e50; font-size: 16px;">XÁC THỰC QUYỀN TRUY CẬP</b></div>', unsafe_allow_html=True)
-            pwd = st.text_input("Mật khẩu", type="password", placeholder="Nhập mật khẩu...", label_visibility="collapsed")
-            if st.form_submit_button("🚀 ĐĂNG NHẬP HỆ THỐNG", use_container_width=True):
-                if pwd == PASS_ADMIN: st.session_state["role"] = "Admin"; st.rerun()
-                elif pwd == PASS_DAI_BIEU: st.session_state["role"] = "DaiBieu"; st.rerun()
-                else: st.error("❌ Sai mật khẩu!")
+            st.markdown('<div style="text-align: center; margin-bottom: 15px;"><span style="font-size: 28px;">🚀</span><br><b style="color: #2c3e50; font-size: 16px;">TRUY CẬP VÀO HỆ THỐNG TÀI LIỆU</b></div>', unsafe_allow_html=True)
+            
+            # Ô nhập pass giờ chỉ dành cho Admin, chú thích rõ ràng
+            pwd = st.text_input("Mật khẩu Quản trị viên (Chỉ Admin):", type="password", placeholder="Đại biểu vui lòng để trống ô này...")
+            
+            if st.form_submit_button("🚪 VÀO PHÒNG HỌP KHÔNG GIẤY", use_container_width=True):
+                if pwd == "": 
+                    # Nếu để trống mật khẩu -> Cho vào thẳng với quyền Đại biểu
+                    st.session_state["role"] = "DaiBieu"
+                    st.rerun()
+                elif pwd == PASS_ADMIN: 
+                    # Nếu nhập đúng mật khẩu Admin -> Cho vào với quyền Quản trị
+                    st.session_state["role"] = "Admin"
+                    st.rerun()
+                else: 
+                    # Báo lỗi nhẹ nhàng nếu gõ linh tinh
+                    st.error("❌ Sai mật khẩu Quản trị! (Nếu là Đại biểu, vui lòng xoá trắng ô mật khẩu và ấn nút)")
     st.stop()
 
 # ==========================================
-# GIAO DIỆN CHÍNH
+# GIAO DIỆN CHÍNH (SAU KHI VÀO TRONG)
 # ==========================================
 logo_sidebar = get_logo_base64()
 if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center; margin-bottom: 20px;"><img src="data:image/png;base64,{logo_sidebar}" width="100" style="object-fit: contain;"></div>', unsafe_allow_html=True)
 if st.sidebar.button("🔄 Làm mới dữ liệu", use_container_width=True): st.cache_data.clear(); st.rerun()
-if st.sidebar.button("🚪 Đăng xuất", use_container_width=True, type="primary"): st.session_state["role"] = None; st.session_state["selected_meeting_id"] = None; st.rerun()
+if st.sidebar.button("🚪 Thoát khỏi phòng họp", use_container_width=True, type="primary"): st.session_state["role"] = None; st.session_state["selected_meeting_id"] = None; st.rerun()
 
 menu_list = ["📚 Phòng họp & Tài liệu", "⚙️ Quản trị: Tạo mới", "📤 Quản trị: Đăng Tài liệu", "✏️ Quản trị: Chỉnh sửa / Xóa"] if st.session_state["role"] == "Admin" else ["📚 Phòng họp & Tài liệu"]
 menu = st.sidebar.radio("📌 CHỨC NĂNG:", menu_list)
@@ -303,12 +316,11 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
                 supabase.table("cuoc_hop").update({"ten_ch": new_ten, "thoi_gian": new_bd, "thoi_gian_ket_thuc": new_kt, "dia_diem": new_dd, "cho_phep_gop_y": new_cp_gy}).eq("ma_ch", ma_sua).execute()
                 st.success("✅ Đã cập nhật!"); st.cache_data.clear(); st.rerun()
             if col_b2.form_submit_button("🗑️ XÓA CUỘC HỌP NÀY", use_container_width=True):
-                try: # Dòng này thụt lề vào 1 Tab so với chữ 'if'
-                    # Các dòng dưới này thụt lề vào 1 Tab so với chữ 'try'
+                try: 
                     supabase.table("tai_lieu").delete().eq("ma_ch", ma_sua).execute()
                     supabase.table("cuoc_hop").delete().eq("ma_ch", ma_sua).execute()
                     st.warning("🔥 Đã xóa sạch cuộc họp và toàn bộ tài liệu!")
                     st.cache_data.clear()
                     st.rerun()
-                except Exception as e: # Dòng này thẳng hàng với chữ 'try'
+                except Exception as e: 
                     st.error(f"Lỗi khi xóa: {e}")
