@@ -22,7 +22,7 @@ except:
 # ==========================================
 # HÀM ĐẾM LƯỢT TRUY CẬP THÔNG MINH
 # ==========================================
-def log_access("E-Cabinet TGDV"):
+def log_access(app_name):
     # Tạo key riêng cho mỗi app để chỉ đếm 1 lần khi người dùng mới vào trang
     key_name = f"da_dem_truy_cap_{app_name}"
     if key_name not in st.session_state:
@@ -34,7 +34,7 @@ def log_access("E-Cabinet TGDV"):
 
 # GỌI HÀM KÍCH HOẠT ĐẾM:
 # Sếp nhớ sửa chữ bên trong ngoặc kép cho khớp với tên của từng App nhé!
-log_access("Phòng họp E-Cabinet")
+log_access("E-Cabinet TGDV")
 
 # --- MẬT KHẨU ---
 PASS_ADMIN = "Admin@2026"
