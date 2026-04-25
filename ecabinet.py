@@ -17,23 +17,21 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-except:
+except Exception:
     pass
+
 # ==========================================
 # HÀM ĐẾM LƯỢT TRUY CẬP THÔNG MINH
 # ==========================================
 def log_access(app_name):
-    # Tạo key riêng cho mỗi app để chỉ đếm 1 lần khi người dùng mới vào trang
     key_name = f"da_dem_truy_cap_{app_name}"
     if key_name not in st.session_state:
         try:
             supabase.table("thong_ke_truy_cap").insert({"ten_app": app_name}).execute()
             st.session_state[key_name] = True
-        except:
-            pass # Lỗi mạng thì bỏ qua để không ảnh hưởng app
+        except Exception:
+            pass
 
-# GỌI HÀM KÍCH HOẠT ĐẾM:
-# Sếp nhớ sửa chữ bên trong ngoặc kép cho khớp với tên của từng App nhé!
 log_access("E-Cabinet TGDV")
 
 # --- MẬT KHẨU ---
@@ -69,12 +67,15 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-def get_vn_now(): return datetime.utcnow() + timedelta(hours=7)
+def get_vn_now(): 
+    return datetime.utcnow() + timedelta(hours=7)
 
 def get_logo_base64():
     try:
-        with open("Logo TGDV.png", "rb") as f: return base64.b64encode(f.read()).decode("utf-8")
-    except: return ""
+        with open("Logo TGDV.png", "rb") as f: 
+            return base64.b64encode(f.read()).decode("utf-8")
+    except Exception: 
+        return ""
 
 def hien_thi_tieu_de(tieu_de_chinh):
     logo_data = get_logo_base64()
@@ -92,28 +93,40 @@ def load_data():
         df_tl = pd.DataFrame(tl).rename(columns={'ma_ch': 'Mã cuộc họp', 'ma_tl': 'Mã tài liệu', 'ten_tl': 'Tên tài liệu', 'link_file': 'Link Google Drive'})
         df_yk = pd.DataFrame(yk).rename(columns={'ma_ch': 'Mã cuộc họp', 'nguoi_gop_y': 'Tên đơn vị / Đại biểu', 'noi_dung': 'Nội dung góp ý', 'link_file': 'Link File sửa đổi', 'created_at': 'Thời gian gửi'})
         
-        if not df_yk.empty: df_yk['Thời gian gửi'] = pd.to_datetime(df_yk['Thời gian gửi']).dt.tz_convert('Asia/Ho_Chi_Minh').dt.strftime("%H:%M %d/%m/%Y")
+        if not df_yk.empty: 
+            df_yk['Thời gian gửi'] = pd.to_datetime(df_yk['Thời gian gửi']).dt.tz_convert('Asia/Ho_Chi_Minh').dt.strftime("%H:%M %d/%m/%Y")
         return {"cuoc_hop": df_ch, "tai_lieu": df_tl, "y_kien": df_yk}
-    except: return {"cuoc_hop": pd.DataFrame(), "tai_lieu": pd.DataFrame(), "y_kien": pd.DataFrame()}
+    except Exception: 
+        return {"cuoc_hop": pd.DataFrame(), "tai_lieu": pd.DataFrame(), "y_kien": pd.DataFrame()}
 
 def parse_meeting_time(t_str):
-    try: return datetime.strptime(t_str.strip(), "%H:%M, %d/%m/%Y")
-    except: return None
+    try: 
+        return datetime.strptime(t_str.strip(), "%H:%M, %d/%m/%Y")
+    except Exception: 
+        return None
 
 def get_realtime_status(start_str, end_str):
     start_time = parse_meeting_time(start_str)
     end_time = parse_meeting_time(end_str)
     now = get_vn_now()
     
-    if not start_time: return "KHÔNG XÁC ĐỊNH", "tag-da-ket-thuc"
-    if not end_time: end_time = start_time + timedelta(hours=4)
+    if not start_time: 
+        return "KHÔNG XÁC ĐỊNH", "tag-da-ket-thuc"
     
-    if now < start_time: return "Sắp diễn ra", "tag-sap-dien-ra"
-    elif start_time <= now <= end_time: return "Đang diễn ra", "tag-dang-dien-ra"
-    else: return "Đã kết thúc", "tag-da-ket-thuc"
+    if not end_time: 
+        end_time = start_time + timedelta(hours=4)
+    
+    if now < start_time: 
+        return "Sắp diễn ra", "tag-sap-dien-ra"
+    elif start_time <= now <= end_time: 
+        return "Đang diễn ra", "tag-dang-dien-ra"
+    else: 
+        return "Đã kết thúc", "tag-da-ket-thuc"
 
-if "role" not in st.session_state: st.session_state["role"] = None
-if "selected_meeting_id" not in st.session_state: st.session_state["selected_meeting_id"] = None
+if "role" not in st.session_state: 
+    st.session_state["role"] = None
+if "selected_meeting_id" not in st.session_state: 
+    st.session_state["selected_meeting_id"] = None
 
 data_dict = load_data()
 df_cuoc_hop = data_dict.get("cuoc_hop", pd.DataFrame())
@@ -140,10 +153,9 @@ if st.session_state["role"] is None:
             with target_cols[i]:
                 st.markdown(f'<div class="featured-card"><div style="text-align: left;"><span class="{row["TagClass"]}">{row["RealtimeStatus"]}</span></div><div class="featured-title">{row["Tên cuộc họp"]}</div><div class="featured-details"><b>📍 Địa điểm:</b> {row["Địa điểm"]}<br><b>⏰ Bắt đầu:</b> {row["Thời gian"]}<br><b>🏁 Kết thúc:</b> {row.get("Thời gian kết thúc", "Chưa xác định")}</div></div>', unsafe_allow_html=True)
                 
-                # NÚT BẤM THẦN KỲ ĐÃ ĐƯỢC NÂNG CẤP
                 if st.button("🚀 VÀO PHÒNG HỌP NÀY", key=f"btn_{row['Mã cuộc họp']}", type="primary", use_container_width=True):
                     st.session_state["selected_meeting_id"] = row['Mã cuộc họp']
-                    st.session_state["role"] = "DaiBieu" # Cho vào thẳng với quyền Đại biểu luôn
+                    st.session_state["role"] = "DaiBieu"
                     st.rerun()
     st.write("---")
     
@@ -165,9 +177,17 @@ if st.session_state["role"] is None:
 # GIAO DIỆN CHÍNH (SAU KHI VÀO TRONG)
 # ==========================================
 logo_sidebar = get_logo_base64()
-if logo_sidebar: st.sidebar.markdown(f'<div style="text-align: center; margin-bottom: 20px;"><img src="data:image/png;base64,{logo_sidebar}" width="100" style="object-fit: contain;"></div>', unsafe_allow_html=True)
-if st.sidebar.button("🔄 Làm mới dữ liệu", use_container_width=True): st.cache_data.clear(); st.rerun()
-if st.sidebar.button("🚪 Thoát khỏi phòng họp", use_container_width=True, type="primary"): st.session_state["role"] = None; st.session_state["selected_meeting_id"] = None; st.rerun()
+if logo_sidebar: 
+    st.sidebar.markdown(f'<div style="text-align: center; margin-bottom: 20px;"><img src="data:image/png;base64,{logo_sidebar}" width="100" style="object-fit: contain;"></div>', unsafe_allow_html=True)
+
+if st.sidebar.button("🔄 Làm mới dữ liệu", use_container_width=True): 
+    st.cache_data.clear()
+    st.rerun()
+
+if st.sidebar.button("🚪 Thoát khỏi phòng họp", use_container_width=True, type="primary"): 
+    st.session_state["role"] = None
+    st.session_state["selected_meeting_id"] = None
+    st.rerun()
 
 menu_list = ["📚 Phòng họp & Tài liệu", "⚙️ Quản trị: Tạo mới", "📤 Quản trị: Đăng Tài liệu", "✏️ Quản trị: Chỉnh sửa / Xóa"] if st.session_state["role"] == "Admin" else ["📚 Phòng họp & Tài liệu"]
 menu = st.sidebar.radio("📌 CHỨC NĂNG:", menu_list)
@@ -175,20 +195,23 @@ menu = st.sidebar.radio("📌 CHỨC NĂNG:", menu_list)
 hien_thi_tieu_de("HỆ THỐNG PHÒNG HỌP KHÔNG GIẤY")
 
 if menu == "📚 Phòng họp & Tài liệu":
-    if df_cuoc_hop.empty: st.info("Chưa có cuộc họp.")
+    if df_cuoc_hop.empty: 
+        st.info("Chưa có cuộc họp.")
     else:
         ds_lua_chon = df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']
         idx_def = 0
         if st.session_state.get("selected_meeting_id"):
             for i, val in enumerate(ds_lua_chon):
-                if val.startswith(st.session_state["selected_meeting_id"]): idx_def = i; break
+                if val.startswith(st.session_state["selected_meeting_id"]): 
+                    idx_def = i
+                    break
         chon_hop = st.selectbox("📂 Lựa chọn Hội nghị:", ds_lua_chon, index=idx_def)
         
         if chon_hop:
-            ma_ch = chon_hop.split(" - ")[0]; st.session_state["selected_meeting_id"] = ma_ch
+            ma_ch = chon_hop.split(" - ")[0]
+            st.session_state["selected_meeting_id"] = ma_ch
             thong_tin = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_ch].iloc[0]
             
-            # Đọc trạng thái Tắt/Bật góp ý từ CSDL (Mặc định là True nếu cột chưa có data)
             cho_phep_yk = True if pd.isna(thong_tin.get('cho_phep_gop_y')) else bool(thong_tin.get('cho_phep_gop_y'))
             
             st.markdown(f"<h3 style='color: #2c3e50; font-size: 20px; border-bottom: 2px solid #17a2b8; padding-bottom: 10px;'>📋 {thong_tin['Tên cuộc họp']}</h3>", unsafe_allow_html=True)
@@ -201,16 +224,16 @@ if menu == "📚 Phòng họp & Tài liệu":
             
             st.write("---")
 
-            # Xử lý Chia cột động theo trạng thái
             if cho_phep_yk:
                 col_doc, col_feedback = st.columns([5, 5], gap="large")
             else:
-                col_doc = st.container() # Cho full màn hình nếu tắt góp ý
+                col_doc = st.container()
 
             with col_doc:
                 st.markdown('<div class="section-title">📑 TÀI LIỆU KỲ HỌP</div>', unsafe_allow_html=True)
                 tl_cua_hop = df_tai_lieu[df_tai_lieu['Mã cuộc họp'] == ma_ch] if not df_tai_lieu.empty else pd.DataFrame()
-                if tl_cua_hop.empty: st.write("Chưa có tài liệu.")
+                if tl_cua_hop.empty: 
+                    st.write("Chưa có tài liệu.")
                 else:
                     for idx, row in tl_cua_hop.iterrows():
                         file_url = str(row.get("Link Google Drive", ""))
@@ -231,7 +254,8 @@ if menu == "📚 Phòng họp & Tài liệu":
                             f_u = st.file_uploader("📎 Đính kèm file văn bản đã sửa (Nếu có):", type=["docx", "pdf"])
                             
                             if st.form_submit_button("🚀 GỬI Ý KIẾN"):
-                                if not h_t or not c_v or not d_v: st.error("⚠️ Vui lòng điền đủ Họ tên, Chức vụ và Đơn vị!")
+                                if not h_t or not c_v or not d_v: 
+                                    st.error("⚠️ Vui lòng điền đủ Họ tên, Chức vụ và Đơn vị!")
                                 else:
                                     with st.spinner("Đang gửi..."):
                                         p_u = ""
@@ -240,7 +264,9 @@ if menu == "📚 Phòng họp & Tài liệu":
                                             supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f_u.getvalue(), file_options={"content-type": f_u.type})
                                             p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
                                         supabase.table("y_kien").insert({"ma_ch": ma_ch, "nguoi_gop_y": f"{h_t} ({c_v} - {d_v})", "noi_dung": n_d, "link_file": p_u}).execute()
-                                        st.success("✅ Gửi thành công!"); st.cache_data.clear(); st.rerun()
+                                        st.success("✅ Gửi thành công!")
+                                        st.cache_data.clear()
+                                        st.rerun()
 
                     with tab_xem:
                         yk_cua_hop = df_y_kien[df_y_kien['Mã cuộc họp'] == ma_ch] if not df_y_kien.empty else pd.DataFrame()
@@ -273,38 +299,48 @@ elif menu == "⚙️ Quản trị: Tạo mới":
         
         if st.form_submit_button("LƯU CUỘC HỌP MỚI"):
             pattern = r"^\d{2}:\d{2}, \d{2}/\d{2}/\d{4}$"
-            if not ma_ch or not ten_ch: st.error("⚠️ Thiếu thông tin!")
-            elif not re.match(pattern, t_bd) or not re.match(pattern, t_kt): st.error("⚠️ Sai định dạng thời gian!")
+            if not ma_ch or not ten_ch: 
+                st.error("⚠️ Thiếu thông tin!")
+            elif not re.match(pattern, t_bd) or not re.match(pattern, t_kt): 
+                st.error("⚠️ Sai định dạng thời gian!")
             else:
                 supabase.table("cuoc_hop").insert({"ma_ch": ma_ch, "ten_ch": ten_ch, "thoi_gian": t_bd, "thoi_gian_ket_thuc": t_kt, "dia_diem": d_d, "cho_phep_gop_y": cp_gy}).execute()
-                st.success("✅ Thành công!"); st.cache_data.clear()
+                st.success("✅ Thành công!")
+                st.cache_data.clear()
 
 elif menu == "📤 Quản trị: Đăng Tài liệu":
     st.markdown('<div class="section-title">📤 UPLOAD TÀI LIỆU LÊN HỆ THỐNG</div>', unsafe_allow_html=True)
-    if df_cuoc_hop.empty: st.warning("⚠️ Cần tạo cuộc họp trước.")
+    if df_cuoc_hop.empty: 
+        st.warning("⚠️ Cần tạo cuộc họp trước.")
     else:
         with st.form("form_tai_lieu", clear_on_submit=True):
             ch_chon = st.selectbox("📌 Gắn vào Cuộc họp:", (df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']).tolist())
             u_fs = st.file_uploader("📂 Chọn file:", type=["pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx"], accept_multiple_files=True)
+            
             if st.form_submit_button("🚀 TẢI LÊN"):
-                if not u_fs: st.error("⚠️ Chọn file!")
+                if not u_fs: 
+                    st.error("⚠️ Chọn file!")
                 else:
-                    ma_ch = ch_chon.split(" - ")[0]; pg = st.progress(0)
+                    ma_ch = ch_chon.split(" - ")[0]
+                    pg = st.progress(0)
                     for i, f in enumerate(u_fs):
                         s_n = f"{ma_ch}_{get_vn_now().strftime('%H%M%S')}_{uuid.uuid4().hex[:4]}.{f.name.split('.')[-1]}"
                         supabase.storage.from_("kho-tai-lieu").upload(path=s_n, file=f.getvalue(), file_options={"content-type": f.type})
                         p_u = supabase.storage.from_("kho-tai-lieu").get_public_url(s_n)
                         supabase.table("tai_lieu").insert({"ma_ch": ma_ch, "ma_tl": f"TL{i}", "ten_tl": f.name, "link_file": p_u}).execute()
                         pg.progress((i+1)/len(u_fs))
-                    st.success("✅ Xong!"); st.cache_data.clear()
+                    st.success("✅ Xong!")
+                    st.cache_data.clear()
 
 elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
     st.markdown('<div class="section-title">✏️ CHỈNH SỬA THÔNG TIN CUỘC HỌP</div>', unsafe_allow_html=True)
-    if df_cuoc_hop.empty: st.info("Không có dữ liệu.")
+    if df_cuoc_hop.empty: 
+        st.info("Không có dữ liệu.")
     else:
         ch_sua = st.selectbox("Chọn cuộc họp muốn sửa:", (df_cuoc_hop['Mã cuộc họp'] + " - " + df_cuoc_hop['Tên cuộc họp']).tolist())
         ma_sua = ch_sua.split(" - ")[0]
         row_cu = df_cuoc_hop[df_cuoc_hop['Mã cuộc họp'] == ma_sua].iloc[0]
+        
         with st.form("form_sua_ch"):
             new_ten = st.text_input("Tên cuộc họp:", value=row_cu['Tên cuộc họp'])
             c1, c2 = st.columns(2)
@@ -316,9 +352,13 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
             new_cp_gy = st.checkbox("✅ Cho phép Đại biểu Gửi Ý kiến / Tham luận trực tuyến", value=cp_gy_cu)
             
             col_b1, col_b2 = st.columns([1, 1])
+            
             if col_b1.form_submit_button("💾 CẬP NHẬT THÔNG TIN", use_container_width=True):
                 supabase.table("cuoc_hop").update({"ten_ch": new_ten, "thoi_gian": new_bd, "thoi_gian_ket_thuc": new_kt, "dia_diem": new_dd, "cho_phep_gop_y": new_cp_gy}).eq("ma_ch", ma_sua).execute()
-                st.success("✅ Đã cập nhật!"); st.cache_data.clear(); st.rerun()
+                st.success("✅ Đã cập nhật!")
+                st.cache_data.clear()
+                st.rerun()
+                
             if col_b2.form_submit_button("🗑️ XÓA CUỘC HỌP NÀY", use_container_width=True):
                 try: 
                     supabase.table("tai_lieu").delete().eq("ma_ch", ma_sua).execute()
@@ -328,3 +368,5 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
                     st.rerun()
                 except Exception as e: 
                     st.error(f"Lỗi khi xóa: {e}")
+
+# XIN LƯU Ý: LUÔN GIỮ DÒNG TRỐNG NÀY Ở CUỐI FILE ĐỂ TRÁNH LỖI TOKENIZER
