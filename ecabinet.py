@@ -960,9 +960,23 @@ elif menu == "✏️ Quản trị: Chỉnh sửa / Xóa":
 
             if submitted_delete:
                 try:
+                    # 1. Xóa các ý kiến liên quan trong DB
+                    supabase.table("y_kien").delete().eq("ma_ch", ma_sua).execute()
+                    
+                    # 2. Lấy danh sách tài liệu để xóa file vật lý trên Cloud
+                    tl_cu = supabase.table("tai_lieu").select("link_file").eq("ma_ch", ma_sua).execute().data
+                    for tl in tl_cu:
+                        url = tl.get("link_file", "")
+                        if url:
+                            # Lấy tên file từ url
+                            ten_file_tren_cloud = url.split('/')[-1]
+                            supabase.storage.from_("kho-tai-lieu").remove([ten_file_tren_cloud])
+                    
+                    # 3. Xóa thông tin tài liệu và cuộc họp trong DB
                     supabase.table("tai_lieu").delete().eq("ma_ch", ma_sua).execute()
                     supabase.table("cuoc_hop").delete().eq("ma_ch", ma_sua).execute()
-                    st.warning(f"🗑️ Đã xóa cuộc họp '{row_cu['Tên cuộc họp']}' và toàn bộ tài liệu liên quan.")
+                    
+                    st.warning(f"🗑️ Đã xóa cuộc họp '{row_cu['Tên cuộc họp']}' và dọn sạch toàn bộ tài liệu/ý kiến liên quan.")
                     st.cache_data.clear()
                     st.rerun()
                 except Exception as e:
